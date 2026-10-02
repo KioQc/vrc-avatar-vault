@@ -2,13 +2,15 @@
 
 Application desktop locale pour gérer les avatars VRChat, leurs versions de développement et leurs changelogs. Tauri 2, React, TypeScript strict, Vite, Tailwind CSS 4, composants shadcn/ui fondés sur Radix, Lucide, TanStack Query, Zustand, React Hook Form, Zod, date-fns et SQLite.
 
-## Version 0.7.0
+## Version 0.8.0
 
-Installer : `release/VRC-Avatar-Vault-0.7.0-Setup.exe`. Portable : `release/VRC-Avatar-Vault-0.7.0.exe`. Données conservées dans le même dossier AppData lors des mises à jour.
+Installer : `release/VRC-Avatar-Vault-0.8.0-Setup.exe`. Portable : `release/VRC-Avatar-Vault-0.8.0.exe`. Données conservées dans le même dossier AppData lors des mises à jour.
 
 Studio disponible sous **Avatar → Development** : surveillance, snapshots/inspecteurs, bugs, sessions, dépendances et notes de version. [Fonctions et limites](EXTENSIONS.md). [Installer Unity Bridge](unity-bridge/com.vrcavatarvault.bridge/README.md). [Protocole local](docs/LOCAL-API.md).
 
 Refonte desktop : [interface, raccourcis et vérifications](docs/UI-REDESIGN.md).
+
+Mises à jour signées via GitHub : [fonctionnement et publication](docs/GITHUB-UPDATES.md).
 
 Centre de mises à jour local : [utilisation et préparation des prochaines versions](docs/UPDATES.md).
 

@@ -1,3 +1,16 @@
+# Vérification 0.8.0 — 2 octobre 2026
+
+- TypeScript strict et ESLint : réussis.
+- Vitest : 71 tests réussis, 10 fichiers. Nouveaux tests des états GitHub non configuré, téléchargement requis, installation prête et notes échappées.
+- Rust : 26 tests réussis, incluant le contrôle du dépôt autorisé pour les téléchargements, la conservation des données et OSC.
+- Compilation Vite, Rust release et installateur NSIS x64 : réussies. Signature de mise à jour générée avec Tauri ; clé privée hors dépôt et dans GitHub Actions Secrets.
+- Version 0.8.0 embarquée, ZIP local et empreinte SHA-256 vérifiés. Flux GitHub latest.json généré.
+- Workflows validés par actionlint 1.7.12. Les premiers runs GitHub échouent avant tout job (startup_failure / BuildFailed) ; leur fonctionnement distant n'est pas confirmé.
+- Le dépôt est encore privé en attente du choix de visibilité. Le flux ne peut pas être lu anonymement dans cet état.
+- Aucune installation sur les données personnelles et aucun redémarrage de l'application de l'utilisateur pour ces vérifications.
+
+---
+
 # Vérification 0.7.0 — 1 octobre 2026
 
 - TypeScript strict et ESLint : réussis.

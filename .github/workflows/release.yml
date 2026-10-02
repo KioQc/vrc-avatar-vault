@@ -1,0 +1,70 @@
+name: Publish signed Windows update
+on:
+  push:
+    tags: ['v*.*.*']
+permissions:
+  contents: write
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+          cache: npm
+      - uses: dtolnay/rust-toolchain@89b12181fb390509a0842a86cc55eeb8eb928c1d
+        with:
+          toolchain: stable
+      - name: Validate release version and signing configuration
+        id: release_info
+        shell: pwsh
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+          SIGNING_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+        run: |
+          if (-not $env:SIGNING_KEY) { throw 'Missing TAURI_SIGNING_PRIVATE_KEY repository secret' }
+          node scripts/check-release.mjs $env:RELEASE_TAG
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $version = $env:RELEASE_TAG.Substring(1)
+          $notes = Get-Content -Raw -Encoding UTF8 "docs/RELEASE-$version.txt"
+          $delimiter = [guid]::NewGuid().ToString()
+          "notes<<$delimiter" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          $notes | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          $delimiter | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+      - run: npm ci
+      - run: npm run check
+      - run: cargo test --locked --manifest-path src-tauri/Cargo.toml --lib
+      - name: Build and upload a draft release
+        uses: tauri-apps/tauri-action@84b9d35b5fc46c1e45415bdb6144030364f7ebc5
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ''
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: VRC Avatar Vault ${{ github.ref_name }}
+          releaseBody: ${{ steps.release_info.outputs.notes }}
+          releaseDraft: true
+          prerelease: false
+          includeUpdaterJson: true
+          updaterJsonPreferNsis: true
+          args: --bundles nsis --locked
+      - name: Publish only after all update assets exist
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          $release = gh release view $env:RELEASE_TAG --json assets | ConvertFrom-Json
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $names = @($release.assets.name)
+          if ('latest.json' -notin $names -or -not ($names -match '\.exe$') -or -not ($names -match '\.sig$')) { throw 'Missing signed update assets' }
+          $version = $env:RELEASE_TAG.Substring(1)
+          gh release edit $env:RELEASE_TAG --notes-file "docs/RELEASE-$version.txt" --draft=false --latest
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

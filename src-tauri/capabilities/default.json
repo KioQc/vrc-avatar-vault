@@ -1,0 +1,12 @@
+{
+  "identifier": "main",
+  "description": "Local vault window",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "core:window:allow-set-title",
+    "dialog:allow-open",
+    "dialog:allow-save",
+    "core:webview:allow-internal-toggle-devtools"
+  ]
+}

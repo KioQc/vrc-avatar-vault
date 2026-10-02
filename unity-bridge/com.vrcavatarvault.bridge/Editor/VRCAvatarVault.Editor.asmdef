@@ -1,0 +1,11 @@
+{
+  "name": "VRCAvatarVault.Editor",
+  "rootNamespace": "VRCAvatarVault",
+  "references": [
+    "Unity.Newtonsoft.Json"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "autoReferenced": true
+}

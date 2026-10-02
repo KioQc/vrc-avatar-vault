@@ -1,0 +1,18 @@
+{
+  "id": "avtr_00000000-0000-4000-8000-000000000003",
+  "name": "Echo · Quest",
+  "description": "Private development fixture.",
+  "authorName": "Fixture author",
+  "version": 3,
+  "releaseStatus": "private",
+  "tags": [],
+  "unityPackages": [
+    {
+      "id": "android-3",
+      "platform": "android",
+      "assetVersion": 3,
+      "unityVersion": "2022.3.22f1",
+      "performanceRating": "Poor"
+    }
+  ]
+}

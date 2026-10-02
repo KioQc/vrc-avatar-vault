@@ -1,0 +1,15 @@
+node_modules/
+dist/
+src-tauri/target/
+*.log
+.env.local
+release/
+src-tauri/gen/
+.env
+.env.*
+*.key
+*.pem
+*.sqlite*
+*.db
+*.tsbuildinfo
+docs/*REQUEST.md

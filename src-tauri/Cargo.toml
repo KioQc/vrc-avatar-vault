@@ -1,0 +1,36 @@
+[package]
+name = "vrc-avatar-vault"
+version = "0.8.0"
+description = "Local VRChat avatar history manager"
+edition = "2021"
+
+[lib]
+name = "vrc_avatar_vault_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[features]
+custom-protocol = ["tauri/custom-protocol"]
+
+[dependencies]
+tauri = { version = "2", features = ["protocol-asset"] }
+tauri-plugin-dialog = "2"
+tauri-plugin-updater = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+rusqlite = { version = "0.37", features = ["bundled", "backup"] }
+reqwest = { version = "0.12", default-features = false, features = ["json", "cookies", "rustls-tls"] }
+tokio = { version = "1", features = ["sync", "time"] }
+keyring = { version = "3", features = ["windows-native", "apple-native", "sync-secret-service"] }
+uuid = { version = "1", features = ["v4"] }
+rand = "0.9"
+base64 = "0.22"
+urlencoding = "2"
+httpdate = "1"
+
+sha2 = "0.10"
+
+semver = "1"
+url = "2"

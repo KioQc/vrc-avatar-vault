@@ -1,0 +1,10 @@
+{
+  "name": "com.vrcavatarvault.bridge",
+  "version": "0.1.0",
+  "displayName": "VRC Avatar Vault \u2014 Unity Bridge",
+  "description": "Local authenticated integration and read-only avatar snapshots for VRC Avatar Vault.",
+  "unity": "2022.3",
+  "dependencies": {
+    "com.unity.nuget.newtonsoft-json": "3.2.1"
+  }
+}

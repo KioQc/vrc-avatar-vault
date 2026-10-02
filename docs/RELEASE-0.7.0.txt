@@ -1,0 +1,5 @@
+Centre de mises à jour dans Settings > Application updates.
+Choix d'un dossier local et vérification automatique facultative toutes les 30 secondes.
+Notes de version, vérification SHA-256 et sauvegarde SQLite vérifiée avant l'installation.
+Les avatars, images et réglages restent dans le dossier de données existant.
+Génération des prochains paquets de mise à jour et synchronisation des numéros de version par scripts.

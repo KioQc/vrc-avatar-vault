@@ -1,0 +1,68 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "VRC Avatar Vault",
+  "version": "0.8.0",
+  "identifier": "local.vrc-avatar-vault.app",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "VRC Avatar Vault",
+        "width": 1440,
+        "height": 940,
+        "minWidth": 980,
+        "minHeight": 680,
+        "dragDropEnabled": false
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' asset: http://asset.localhost https: data: blob:; connect-src ipc: http://ipc.localhost; font-src 'self'; object-src 'none'; base-uri 'self'",
+      "assetProtocol": {
+        "enable": true,
+        "scope": [
+          "$APPDATA/attachments/**"
+        ]
+      }
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": [
+      "nsis"
+    ],
+    "icon": [
+      "icons/icon.png",
+      "icons/icon.ico"
+    ],
+    "useLocalToolsDir": true,
+    "publisher": "VRC Avatar Vault",
+    "windows": {
+      "allowDowngrades": false,
+      "nsis": {
+        "installMode": "currentUser",
+        "languages": [
+          "French",
+          "English"
+        ],
+        "displayLanguageSelector": true
+      }
+    },
+    "createUpdaterArtifacts": true
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDNGMDlBNDkyOTk0OTMyQzAKUldUQU1rbVprcVFKUDQyU1hxcXl5NmtOVmhxbEJrSGNZNTBOQVQ1TUJ6MjhheEI5VFhRM29nWkwK",
+      "endpoints": [
+        "https://github.com/KioQc/vrc-avatar-vault/releases/latest/download/latest.json"
+      ],
+      "windows": {
+        "installMode": "passive"
+      }
+    }
+  }
+}

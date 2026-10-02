@@ -1,0 +1,6 @@
+Mises à jour automatiques via GitHub Releases.
+Recherche au démarrage puis toutes les 15 minutes ; téléchargement automatique désactivable.
+Vérification cryptographique avec la clé publique intégrée à l'application.
+Installation et redémarrage sur confirmation, après sauvegarde SQLite vérifiée.
+Préservation des avatars, images, réglages et comptes existants.
+Publication des prochaines versions par GitHub Actions lors du push d'un tag de version.

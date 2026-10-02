@@ -2,7 +2,9 @@
 
 Le dépôt de code est `KioQc/vrc-avatar-vault`. Le flux intégré est `https://github.com/KioQc/vrc-avatar-vault/releases/latest/download/latest.json`.
 
-Le dépôt doit être **public** pour que l’application puisse lire ce flux et télécharger les versions sans compte GitHub. Tant qu’il est privé, les accès anonymes échouent. Aucun jeton GitHub n’est embarqué dans le programme.
+Le dépôt est **public** depuis le 2 octobre 2026. Le manifeste et l’installateur ont été téléchargés sans authentification et vérifiés. Aucun jeton GitHub n’est embarqué dans le programme.
+
+État de GitHub Actions : le compte est bloqué par un problème de facturation, confirmé dans les annotations des jobs. Le pipeline est configuré mais ne peut pas démarrer tant que GitHub maintient ce blocage. La livraison 0.8.1 est compilée et signée localement, puis publiée sur GitHub. Cela ne bloque pas le téléchargement automatique des versions déjà publiées.
 
 ## Dans l’application
 

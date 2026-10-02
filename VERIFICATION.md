@@ -1,3 +1,16 @@
+# Vérification 0.8.1 — 2 octobre 2026
+
+- Dépôt KioQc/vrc-avatar-vault rendu public avec autorisation de l’utilisateur.
+- Compilation Vite, Rust release et NSIS réussie ; version embarquée 0.8.1.
+- Signature Minisign/Ed25519 vérifiée contre la clé publique intégrée ; fichier altéré refusé.
+- Release v0.8.1 publiée avec installateur, signature, latest.json et ZIP local.
+- Manifeste latest et installateur téléchargés anonymement depuis GitHub ; version 0.8.1 et octets identiques à l’installateur signé localement.
+- Aucun changement fonctionnel depuis les 97 tests réussis de 0.8.0 ; ce correctif porte sur la livraison publique et les métadonnées de version.
+- GitHub Actions : le job 110789139501 indique « The job was not started because your account is locked due to a billing issue. » La compilation distante reste bloquée ; cette livraison a été compilée et signée localement.
+- Installation et redémarrage sur les données personnelles non exécutés.
+
+---
+
 # Vérification 0.8.0 — 2 octobre 2026
 
 - TypeScript strict et ESLint : réussis.

@@ -1,4 +1,4 @@
 Mises à jour GitHub désormais accessibles sans connexion GitHub.
-Publication de l’installateur signé par GitHub Actions.
+Installateur signé et publié sur GitHub Releases.
 Recherche et téléchargement automatiques, puis installation sur confirmation après sauvegarde.
 Aucun changement du format des données locales.

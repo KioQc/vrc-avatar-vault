@@ -13,3 +13,5 @@ src-tauri/gen/
 *.db
 *.tsbuildinfo
 docs/*REQUEST.md
+.discord-delivery/
+*webhooks*.json

@@ -1,0 +1,6 @@
+Accès au serveur Discord officiel depuis Settings → Communauté et support.
+Guides français pour l'installation, VRChat, OSC, les sauvegardes et le support.
+Annonces de releases et de patch notes préparées pour Discord avec mentions désactivées.
+Aucun changement du format des données locales.
+
+Les mises à jour et téléchargements publics fonctionnent. L'exécution de GitHub Actions reste bloquée par la facturation du compte ; cette version a été compilée et publiée depuis le PC.

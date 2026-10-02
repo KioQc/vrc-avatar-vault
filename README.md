@@ -16,6 +16,10 @@ Mises à jour signées via GitHub : [fonctionnement et publication](docs/GITHUB-
 
 Centre de mises à jour local : [utilisation et préparation des prochaines versions](docs/UPDATES.md).
 
+## Communauté et support
+
+Rejoins le [Discord VAV](https://discord.gg/evvAZQzjPt) pour les annonces, les patch notes, le support et les suggestions. Le serveur est actuellement francophone.
+
 ## Démarrer
 
 ### Application Windows

@@ -43,6 +43,7 @@ pub fn run() {
             updates::app_updates,
             online_updates::online_update,
             files::add_attachment,
+            files::open_community,
             preferences::path_preferences,
             unity::unity_project,
             project_scan::scan_project,

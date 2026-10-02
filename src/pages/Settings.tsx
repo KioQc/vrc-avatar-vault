@@ -1,4 +1,5 @@
 import { AISettings } from '../features/studio/AISettings';
+import { openCommunity, COMMUNITY_URL } from '../services/community';
 import { UpdateCenter } from '../features/updates/UpdateCenter';
 import { OnlineUpdateCenter } from '../features/updates/OnlineUpdateCenter';
 import { version as appVersion } from '../../package.json';
@@ -41,6 +42,7 @@ export function Settings() {
   });
   const action = useAction(async (kind: string) => {
     if (kind === 'export') await exportBackup();
+    if (kind === 'community') await openCommunity();
     if (kind === 'import') setBackup(await readBackup());
     if (kind === 'restore' && backup) {
       await restoreBackup(backup);
@@ -96,6 +98,17 @@ export function Settings() {
         </a>
       </nav>
       <div className="settings-stack">
+        <section className="panel">
+          <h2>Communauté et support</h2>
+          <p>
+            Rejoins le Discord VAV pour les annonces, les patch notes, l’entraide et les
+            suggestions. Le serveur est actuellement francophone.
+          </p>
+          <Button onClick={() => action.mutate('community')} disabled={action.isPending}>
+            Ouvrir le Discord VAV
+          </Button>
+          <p className="tiny muted">{COMMUNITY_URL}</p>
+        </section>
         <OnlineUpdateCenter />
         <details className="panel">
           <summary>Manual update from a local folder</summary>

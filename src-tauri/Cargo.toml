@@ -1,6 +1,6 @@
 [package]
 name = "vrc-avatar-vault"
-version = "0.8.1"
+version = "0.8.2"
 description = "Local VRChat avatar history manager"
 edition = "2021"
 

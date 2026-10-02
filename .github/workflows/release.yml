@@ -68,3 +68,23 @@ jobs:
           $version = $env:RELEASE_TAG.Substring(1)
           gh release edit $env:RELEASE_TAG --notes-file "docs/RELEASE-$version.txt" --draft=false --latest
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      # Releases published by GITHUB_TOKEN do not trigger the release event workflow.
+      - name: Announce release on Discord
+        shell: pwsh
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+          DISCORD_RELEASES_WEBHOOK: ${{ secrets.DISCORD_RELEASES_WEBHOOK }}
+          DISCORD_PATCH_NOTES_WEBHOOK: ${{ secrets.DISCORD_PATCH_NOTES_WEBHOOK }}
+        run: |
+          node --test scripts/tests/discord-post.check.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node scripts/discord-release.mjs $env:RELEASE_TAG --send
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Preserve Discord delivery confirmations
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: discord-delivery
+          path: .discord-delivery/
+          include-hidden-files: true
+          if-no-files-found: ignore

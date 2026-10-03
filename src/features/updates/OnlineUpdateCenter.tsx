@@ -44,10 +44,17 @@ export function OnlineUpdateCenter() {
     if (!native) return;
     const subscription = listen<{ downloaded: number; total?: number }>(
       'app-update-progress',
-      (e) => setProgress(e.payload),
+      (e) =>
+        setProgress({
+          downloaded: Number.isFinite(e.payload.downloaded) ? Math.max(0, e.payload.downloaded) : 0,
+          total:
+            Number.isFinite(e.payload.total) && Number(e.payload.total) > 0
+              ? Math.max(e.payload.downloaded || 0, Number(e.payload.total))
+              : undefined,
+        }),
     );
     return () => {
-      void subscription.then((stop) => stop());
+      void subscription.then((stop) => stop()).catch(() => undefined);
     };
   }, [native]);
   const action = useMutation({

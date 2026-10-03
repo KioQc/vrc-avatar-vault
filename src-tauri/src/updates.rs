@@ -22,6 +22,8 @@ struct Release {
     sha256: String,
     size: u64,
     notes: String,
+    #[serde(default)]
+    signature: Option<String>,
 }
 struct Prepared {
     token: String,
@@ -89,6 +91,17 @@ fn verify(path: &Path, release: &Release) -> Result<(), String> {
     }
     if format!("{:x}", hash.finalize()) != release.sha256.to_lowercase() {
         return Err("Installer SHA-256 mismatch. Installation blocked.".into());
+    }
+    if Version::parse(&release.version).map_err(|_| "Invalid version")? >= Version::new(0, 8, 3) {
+        let bytes = fs::read(path).map_err(|_| "Cannot reread installer")?;
+        crate::online_updates::verify_signature(
+            &bytes,
+            release
+                .signature
+                .as_deref()
+                .ok_or("Missing update signature")?,
+            &release.version,
+        )?;
     }
     Ok(())
 }
@@ -172,22 +185,11 @@ pub async fn app_updates(
                 return Err("Update confirmation expired. Verify the package again.".into());
             }
             verify(&prepared.path, &prepared.release)?;
-            let backup = db
-                .root
-                .join("backups")
-                .join(format!("before-install-{}.sqlite", uuid::Uuid::new_v4()));
-            db.conn
-                .lock()
-                .map_err(|_| "Database lock unavailable")?
-                .backup("main", &backup, None)
-                .map_err(|e| e.to_string())?;
-            let copy = rusqlite::Connection::open(&backup).map_err(|e| e.to_string())?;
-            let health: String = copy
-                .query_row("PRAGMA quick_check", [], |r| r.get(0))
-                .map_err(|e| e.to_string())?;
-            if health != "ok" {
-                return Err("Safety backup verification failed".into());
-            }
+            let backup = crate::data_safety::backup(
+                &*db.conn.lock().map_err(|_| "Database lock unavailable")?,
+                &db.root,
+                true,
+            )?;
             std::process::Command::new(&prepared.path)
                 .spawn()
                 .map_err(|e| format!("Could not open the installer: {e}"))?;
@@ -205,11 +207,12 @@ mod tests {
     fn release() -> Release {
         Release {
             product: "local.vrc-avatar-vault.app".into(),
-            version: "1.2.0".into(),
-            installer: "VRC-Avatar-Vault-1.2.0-Setup.exe".into(),
+            version: "0.8.0".into(),
+            installer: "VRC-Avatar-Vault-0.8.0-Setup.exe".into(),
             sha256: format!("{:x}", Sha256::digest(b"MZtest")),
             size: 6,
             notes: "Changes".into(),
+            signature: None,
         }
     }
     #[test]

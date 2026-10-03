@@ -1,3 +1,4 @@
+import { Diagnostics } from '../features/updates/Diagnostics';
 import { AISettings } from '../features/studio/AISettings';
 import { openCommunity, COMMUNITY_URL } from '../services/community';
 import { UpdateCenter } from '../features/updates/UpdateCenter';
@@ -110,6 +111,7 @@ export function Settings() {
           <p className="tiny muted">{COMMUNITY_URL}</p>
         </section>
         <OnlineUpdateCenter />
+        <Diagnostics />
         <details className="panel">
           <summary>Manual update from a local folder</summary>
           <UpdateCenter />

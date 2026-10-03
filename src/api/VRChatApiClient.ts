@@ -1,3 +1,4 @@
+import { useUI } from '../stores/ui';
 import { invoke } from '@tauri-apps/api/core';
 import { mockMode } from '../db/bridge';
 import { parseVRChatAvatar, validateAvatarId } from '../utils/domain';
@@ -21,7 +22,15 @@ class DesktopVRChatClient implements VRChatApiClient {
       const { mockApi } = await import('../db/mock');
       return mockApi(operation, payload) as T;
     }
-    return invoke<T>('vrchat', { operation, payload });
+    try {
+      return await invoke<T>('vrchat', { operation, payload });
+    } catch (error) {
+      if (String(error).includes('session expired')) {
+        this.clearCache();
+        useUI.getState().setUser(null);
+      }
+      throw error;
+    }
   }
   login(username: string, password: string) {
     return this.call<User>('login', { username, password });
@@ -38,6 +47,7 @@ class DesktopVRChatClient implements VRChatApiClient {
     return this.verifySession();
   }
   async logout() {
+    useUI.getState().setUser(null);
     try {
       await this.call('logout');
     } finally {
@@ -64,7 +74,11 @@ class DesktopVRChatClient implements VRChatApiClient {
   async renameAvatar(id: string, name: string) {
     if (!validateAvatarId(id)) throw new Error('Invalid avatar ID');
     name = name.trim();
-    if (!name || [...name].length > 100 || [...name].some(c => c.charCodeAt(0) < 32 || c.charCodeAt(0) === 127))
+    if (
+      !name ||
+      [...name].length > 100 ||
+      [...name].some((c) => c.charCodeAt(0) < 32 || c.charCodeAt(0) === 127)
+    )
       throw new Error('Invalid avatar name');
     const value = parseVRChatAvatar(await this.call('rename_avatar', { id, name }));
     if (value.id.toLowerCase() !== id.toLowerCase())

@@ -289,8 +289,7 @@ export async function readBackup() {
 }
 export type Backup = NonNullable<Awaited<ReturnType<typeof readBackup>>>;
 export async function restoreBackup(backup: Backup) {
-  if (!mockMode) await invoke('safety_backup');
-  else {
+  if (mockMode) {
     const current: Record<string, unknown> = {};
     for (const t of order) current[t] = await query(`SELECT * FROM ${t}`);
     localStorage.setItem('vrc-vault-mock-safety-backup', JSON.stringify(current));
@@ -330,5 +329,6 @@ export async function restoreBackup(backup: Backup) {
         ),
       );
     }
-  await execute(statements);
+  if (mockMode) await execute(statements);
+  else await invoke('db_restore', { statements });
 }

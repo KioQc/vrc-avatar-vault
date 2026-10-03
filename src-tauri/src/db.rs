@@ -46,6 +46,20 @@ impl Database {
             std::fs::create_dir_all(root.join(dir))?;
         }
         let existed = root.join("database.sqlite").is_file();
+        if existed {
+            use std::io::Read;
+            let mut file = std::fs::File::open(root.join("database.sqlite"))?;
+            let mut header = [0u8; 16];
+            file.read_exact(&mut header).map_err(|_| {
+                "Database file is empty or truncated. Original file retained; use recovery folders."
+            })?;
+            if &header != b"SQLite format 3\0" {
+                return Err(
+                    "Invalid SQLite database header. Original file retained; contact support."
+                        .into(),
+                );
+            }
+        }
         let mut conn = Connection::open(root.join("database.sqlite"))?;
         conn.execute_batch(
             "PRAGMA foreign_keys=ON; PRAGMA journal_mode=WAL; PRAGMA busy_timeout=5000;",
@@ -65,16 +79,7 @@ impl Database {
             None
         };
         if existed && (version < 3 || previous.as_deref() != Some(app_version)) {
-            let backup = root
-                .join("backups")
-                .join(format!("before-update-{}.sqlite", uuid::Uuid::new_v4()));
-            // SQLite's backup API includes committed WAL pages; copying only database.sqlite would not.
-            conn.backup("main", &backup, None)?;
-            let copy = Connection::open(&backup)?;
-            let health: String = copy.query_row("PRAGMA quick_check", [], |r| r.get(0))?;
-            if health != "ok" {
-                return Err("Safety backup verification failed; update stopped".into());
-            }
+            crate::data_safety::backup(&conn, &root, true)?;
         }
         let tx = conn.transaction()?;
         if version < 1 {
@@ -87,6 +92,9 @@ impl Database {
             tx.execute_batch(include_str!("../migrations/003_studio.sql"))?;
         }
         tx.execute("INSERT INTO settings(key,value) VALUES('__app_version',?1) ON CONFLICT(key) DO UPDATE SET value=excluded.value", [app_version])?;
+        if version < 3 {
+            crate::data_safety::integrity(&tx)?;
+        }
         tx.commit()?;
         Ok(Self {
             conn: Arc::new(Mutex::new(conn)),
@@ -269,14 +277,152 @@ pub fn db_execute(db: tauri::State<Database>, statements: Vec<Statement>) -> Res
 }
 #[tauri::command]
 pub fn safety_backup(db: tauri::State<Database>) -> Result<String, String> {
-    let path = db
-        .root
-        .join("backups")
-        .join(format!("safety-{}.sqlite", uuid::Uuid::new_v4()));
-    db.conn
-        .lock()
-        .map_err(|_| "Database lock unavailable")?
-        .backup("main", &path, None)
-        .map_err(|e| e.to_string())?;
+    let conn = db.conn.lock().map_err(|_| "Database lock unavailable")?;
+    let path = crate::data_safety::backup(&conn, &db.root, false)?;
     Ok(path.to_string_lossy().into())
+}
+
+#[tauri::command]
+pub fn db_restore(db: tauri::State<Database>, statements: Vec<Statement>) -> Result<(), String> {
+    restore(&db, statements)
+}
+fn restore(db: &Database, statements: Vec<Statement>) -> Result<(), String> {
+    let mut conn = db.conn.lock().map_err(|_| "Database lock unavailable")?;
+    crate::data_safety::backup(&conn, &db.root, false)?;
+    let tx = conn.transaction().map_err(|e| e.to_string())?;
+    for s in statements {
+        tx.execute(&s.sql, rusqlite::params_from_iter(values(s.params)?))
+            .map_err(|e| e.to_string())?;
+    }
+    crate::data_safety::integrity(&tx)?;
+    tx.commit().map_err(|e| e.to_string())
+}
+
+#[cfg(test)]
+mod maintenance_tests {
+    use super::*;
+    fn root() -> PathBuf {
+        std::env::temp_dir().join(format!("vav-maintenance-{}", uuid::Uuid::new_v4()))
+    }
+    #[test]
+    fn failed_migration_rolls_back_and_keeps_backup() {
+        let root = root();
+        std::fs::create_dir_all(&root).unwrap();
+        let conn = Connection::open(root.join("database.sqlite")).unwrap();
+        conn.execute_batch(include_str!("../migrations/001_initial.sql"))
+            .unwrap();
+        // Deliberate incompatible table forces the next migration to fail after transaction starts.
+        conn.execute_batch("CREATE TABLE unity_dependency_snapshots(invalid TEXT); INSERT INTO settings VALUES('keep','original');").unwrap();
+        drop(conn);
+        assert!(Database::open_for_version(root.clone(), "0.8.3").is_err());
+        let conn = Connection::open(root.join("database.sqlite")).unwrap();
+        assert_eq!(
+            conn.query_row("PRAGMA user_version", [], |r| r.get::<_, i64>(0))
+                .unwrap(),
+            1
+        );
+        assert_eq!(
+            conn.query_row("SELECT value FROM settings WHERE key='keep'", [], |r| {
+                r.get::<_, String>(0)
+            })
+            .unwrap(),
+            "original"
+        );
+        assert_eq!(std::fs::read_dir(root.join("backups")).unwrap().count(), 1);
+    }
+    #[test]
+    fn failed_restore_rolls_back_and_preserves_current_data() {
+        let db = Database::open(root()).unwrap();
+        db.conn
+            .lock()
+            .unwrap()
+            .execute("INSERT INTO settings VALUES('keep','original')", [])
+            .unwrap();
+        let statements = vec![
+            Statement {
+                sql: "DELETE FROM settings".into(),
+                params: vec![],
+            },
+            Statement {
+                sql: "INSERT INTO missing_table VALUES(1)".into(),
+                params: vec![],
+            },
+        ];
+        assert!(restore(&db, statements).is_err());
+        assert_eq!(
+            db.conn
+                .lock()
+                .unwrap()
+                .query_row("SELECT value FROM settings WHERE key='keep'", [], |r| {
+                    r.get::<_, String>(0)
+                })
+                .unwrap(),
+            "original"
+        );
+    }
+    #[test]
+    fn upgrades_080_081_082_without_losing_stored_relations() {
+        for old in ["0.8.0", "0.8.1", "0.8.2"] {
+            let root = root();
+            let db = Database::open_for_version(root.clone(), old).unwrap();
+            db.conn.lock().unwrap().execute_batch("INSERT INTO avatars(id,name,custom_version,created_at,updated_at,data_json) VALUES('a','Avatar','1.0.0','2026-10-02','2026-10-02','{}'); INSERT INTO releases VALUES('r','a','1.0.0','Release','Keep','2026-10-02','2026-10-02'); INSERT INTO settings VALUES('folder.unityProjects','C:/Users/Test/OneDrive/Projet été');").unwrap();
+            db.conn.lock().unwrap().execute_batch("INSERT INTO account_profiles VALUES('profile','Test','','2026-10-02',NULL,'usr_test'); INSERT INTO unity_projects VALUES('a','C:/Test Unity','{}',NULL);").unwrap();
+            std::fs::write(root.join("attachments/keep.png"), b"retained").unwrap();
+            drop(db);
+            let db = Database::open_for_version(root.clone(), "0.8.3").unwrap();
+            let conn = db.conn.lock().unwrap();
+            assert_eq!(
+                conn.query_row(
+                    "SELECT count(*) FROM releases WHERE avatar_id='a'",
+                    [],
+                    |r| r.get::<_, i64>(0)
+                )
+                .unwrap(),
+                1
+            );
+            assert_eq!(
+                conn.query_row(
+                    "SELECT value FROM settings WHERE key='folder.unityProjects'",
+                    [],
+                    |r| r.get::<_, String>(0)
+                )
+                .unwrap(),
+                "C:/Users/Test/OneDrive/Projet été"
+            );
+            assert_eq!(
+                std::fs::read(root.join("attachments/keep.png")).unwrap(),
+                b"retained"
+            );
+            assert_eq!(
+                conn.query_row("SELECT count(*) FROM account_profiles", [], |r| r
+                    .get::<_, i64>(0))
+                    .unwrap(),
+                1
+            );
+            assert_eq!(
+                conn.query_row(
+                    "SELECT path FROM unity_projects WHERE avatar_id='a'",
+                    [],
+                    |r| r.get::<_, String>(0)
+                )
+                .unwrap(),
+                "C:/Test Unity"
+            );
+            crate::data_safety::integrity(&conn).unwrap();
+        }
+    }
+}
+
+#[cfg(test)]
+mod recovery_tests {
+    use super::*;
+    #[test]
+    fn corrupted_original_is_never_reset() {
+        let root = std::env::temp_dir().join(format!("vav-corrupt-{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&root).unwrap();
+        let path = root.join("database.sqlite");
+        std::fs::write(&path, b"broken database").unwrap();
+        assert!(Database::open(root).is_err());
+        assert_eq!(std::fs::read(path).unwrap(), b"broken database");
+    }
 }

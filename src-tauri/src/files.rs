@@ -83,7 +83,10 @@ pub fn file_transfer(
             std::fs::read_to_string(p).map_err(|e| e.to_string())
         }
         "write" => {
-            std::fs::write(path, content.ok_or("Missing content")?).map_err(|e| e.to_string())?;
+            atomic_write(
+                Path::new(&path),
+                content.ok_or("Missing content")?.as_bytes(),
+            )?;
             Ok(String::new())
         }
         "attachment" => {
@@ -205,5 +208,20 @@ pub fn open_folder(
         .arg(path)
         .spawn()
         .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+pub fn atomic_write(path: &Path, bytes: &[u8]) -> Result<(), String> {
+    use std::io::Write;
+    let parent = path.parent().ok_or("Missing destination directory")?;
+    let mut file = tempfile::NamedTempFile::new_in(parent)
+        .map_err(|_| "Cannot create temporary export file")?;
+    file.write_all(bytes)
+        .map_err(|_| "Export write failed; original file preserved")?;
+    file.as_file()
+        .sync_all()
+        .map_err(|_| "Export flush failed; original file preserved")?;
+    file.persist(path)
+        .map_err(|_| "Cannot replace export; original file preserved")?;
     Ok(())
 }

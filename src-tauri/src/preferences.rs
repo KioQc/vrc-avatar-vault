@@ -14,7 +14,11 @@ pub fn setting(db: &Database, key: &str) -> Result<Option<String>, String> {
 }
 pub fn folder(db: &Database, kind: &str) -> Result<PathBuf, String> {
     if let Some(v) = setting(db, &format!("folder.{kind}"))?.filter(|v| !v.is_empty()) {
-        return Ok(PathBuf::from(v));
+        let path = PathBuf::from(&v);
+        if path.is_absolute() && !v.contains('\0') {
+            return Ok(path);
+        }
+        // Invalid legacy settings fall back; missing external disks remain visible as missing.
     }
     match kind {
         "exports" | "backupExports" => Ok(db.root.join("backups")),

@@ -169,7 +169,10 @@ export function AppLayout() {
           )
             continue;
           try {
-            const update = await refreshAvatar(a);
+            const update = await refreshAvatar(
+              a,
+              () => !cancelled && useUI.getState().user?.id === user?.id,
+            );
             if (cancelled) break;
             syncRetry.current = { after: 0, failures: 0 };
             if (update.differences.length) setUpdates((prev) => [...prev, update]);
@@ -179,6 +182,7 @@ export function AppLayout() {
             });
             await new Promise((resolve) => setTimeout(resolve, 1000));
           } catch (e) {
+            if (cancelled) break;
             syncRetry.current.failures++;
             syncRetry.current.after = Date.now() + syncBackoffMs(syncRetry.current.failures);
             toast.error(`Automatic refresh paused: ${String(e)}`, { id: 'sync-error' });

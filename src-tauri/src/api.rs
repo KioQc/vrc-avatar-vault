@@ -18,6 +18,7 @@ pub struct Session {
     client: reqwest::Client,
     jar: Arc<Jar>,
     last_request: std::time::Instant,
+    next_allowed: std::time::Instant,
 }
 fn credential(profile: &str) -> Result<keyring::Entry, String> {
     let key = if profile == "default" {
@@ -62,6 +63,7 @@ impl Session {
             client,
             jar,
             last_request: std::time::Instant::now() - Duration::from_secs(1),
+            next_allowed: std::time::Instant::now(),
         })
     }
     fn persist(&self) -> Result<(), String> {
@@ -224,6 +226,18 @@ pub async fn vrchat(
     };
     let retryable = ["avatar", "session", "profile", "world"].contains(&operation.as_str());
     for attempt in 0..=3 {
+        let cooldown = session
+            .next_allowed
+            .saturating_duration_since(std::time::Instant::now());
+        if cooldown > Duration::from_secs(120) {
+            return Err(format!(
+                "VRChat cooldown active for {} more seconds. No request sent.",
+                cooldown.as_secs()
+            ));
+        }
+        if !cooldown.is_zero() {
+            tokio::time::sleep(cooldown).await;
+        }
         let elapsed = session.last_request.elapsed();
         if elapsed < Duration::from_millis(750) {
             tokio::time::sleep(Duration::from_millis(750) - elapsed).await;
@@ -251,6 +265,19 @@ pub async fn vrchat(
             }
         })?;
         let status = response.status().as_u16();
+        if status == 429 {
+            let delay = retry_delay(
+                attempt,
+                response
+                    .headers()
+                    .get("Retry-After")
+                    .and_then(|v| v.to_str().ok()),
+                0,
+            );
+            session.next_allowed = std::time::Instant::now()
+                .checked_add(delay)
+                .unwrap_or_else(|| std::time::Instant::now() + Duration::from_secs(86400));
+        }
         if retryable && (status == 429 || status >= 500) && attempt < 3 {
             let delay = retry_delay(
                 attempt,

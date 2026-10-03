@@ -17,10 +17,14 @@ pub struct Server {
     stop: Arc<AtomicBool>,
     pub port: u16,
     presence: Arc<Mutex<Value>>,
+    handle: Option<std::thread::JoinHandle<()>>,
 }
 impl Drop for Server {
     fn drop(&mut self) {
         self.stop.store(true, Ordering::Relaxed);
+        if let Some(handle) = self.handle.take() {
+            let _ = handle.join();
+        }
     }
 }
 fn credential() -> Result<keyring::Entry, String> {
@@ -56,9 +60,13 @@ fn read_request(stream: &mut TcpStream, secret: &str, port: u16) -> Result<Reque
     stream
         .set_read_timeout(Some(Duration::from_secs(3)))
         .map_err(|_| (500, "Socket error".into()))?;
+    let deadline = std::time::Instant::now() + Duration::from_secs(3);
     let mut bytes = Vec::new();
     let mut byte = [0u8; 1];
     while !bytes.ends_with(b"\r\n\r\n") {
+        if std::time::Instant::now() >= deadline {
+            return Err((408, "Request deadline exceeded".into()));
+        }
         if bytes.len() >= 16384 {
             return Err((431, "Headers too large".into()));
         }
@@ -124,9 +132,19 @@ fn read_request(stream: &mut TcpStream, secret: &str, port: u16) -> Result<Reque
         return Err((415, "JSON content type required".into()));
     }
     let mut data = vec![0; len];
-    stream
-        .read_exact(&mut data)
-        .map_err(|_| (400, "Incomplete body".into()))?;
+    let mut received = 0;
+    while received < data.len() {
+        if std::time::Instant::now() >= deadline {
+            return Err((408, "Request deadline exceeded".into()));
+        }
+        let count = stream
+            .read(&mut data[received..])
+            .map_err(|_| (408, "Body timeout".into()))?;
+        if count == 0 {
+            return Err((400, "Incomplete body".into()));
+        }
+        received += count;
+    }
     let body = if len == 0 {
         Value::Null
     } else {
@@ -325,7 +343,7 @@ pub fn integration_control(
         let database = db.inner().clone();
         let presence = Arc::new(Mutex::new(Value::Null));
         let live = presence.clone();
-        std::thread::spawn(move || {
+        let handle = std::thread::spawn(move || {
             while !flag.load(Ordering::Relaxed) {
                 match listener.accept() {
                     Ok((mut stream, addr)) => {
@@ -356,6 +374,7 @@ pub fn integration_control(
             stop,
             port,
             presence,
+            handle: Some(handle),
         });
     }
     Ok(guard.as_ref().map(|s|json!({"running":true,"port":s.port,"protocolVersion":1,"presence":s.presence.lock().ok().map(|v|v.clone())})).unwrap_or(json!({"running":false,"protocolVersion":1})))

@@ -58,11 +58,20 @@ export function ReleaseDialog({
     }
     onClose();
   }, 'Release created');
+  function requestClose() {
+    if (
+      !action.isPending &&
+      (savedVersion ||
+        (!title.trim() && !notes.trim() && !custom.trim()) ||
+        window.confirm('Discard this unfinished release?'))
+    )
+      onClose();
+  }
   return (
     <Modal
       open
       onOpenChange={(v) => {
-        if (!v && !action.isPending) onClose();
+        if (!v) requestClose();
       }}
       title="Create release"
       description={`Current local version: v${avatar.custom_version}. VRChat version stays independent.`}
@@ -167,7 +176,7 @@ export function ReleaseDialog({
         </div>
       </fieldset>
       <div className="dialog-actions">
-        <Button disabled={action.isPending} onClick={onClose}>
+        <Button disabled={action.isPending} onClick={requestClose}>
           Cancel
         </Button>
         <Button

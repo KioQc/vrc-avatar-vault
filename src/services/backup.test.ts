@@ -11,7 +11,15 @@ vi.mock('./files', () => ({
     saved = text;
   },
 }));
-vi.mock('@tauri-apps/api/core', () => ({ invoke: vi.fn(async () => 'safety.sqlite') }));
+vi.mock('@tauri-apps/api/core', () => ({
+  invoke: vi.fn(async (command: string, args?: { statements: Statement[] }) => {
+    if (command === 'db_restore' && args) {
+      const { execute } = await import('../db/bridge');
+      await execute(args.statements);
+    }
+    return 'safety.sqlite';
+  }),
+}));
 vi.mock('../db/bridge', () => ({
   mockMode: false,
   statement: (sql: string, ...params: Scalar[]) => ({ sql, params }),
@@ -77,7 +85,10 @@ it('round-trips a complete vault with history after a safety backup', async () =
   const backup = await readBackup();
   expect(backup).not.toBeNull();
   await restoreBackup(backup!);
-  expect(invoke).toHaveBeenCalledWith('safety_backup');
+  expect(invoke).toHaveBeenCalledWith(
+    'db_restore',
+    expect.objectContaining({ statements: expect.any(Array) }),
+  );
   expect((await repository.avatars())[0].notes).toBe('Private notes');
   expect(await repository.changes(id)).toHaveLength(1);
   expect(await repository.snapshots(id)).toHaveLength(1);

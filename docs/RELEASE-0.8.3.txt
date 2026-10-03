@@ -1,0 +1,13 @@
+VAV 0.8.3 — Maintenance et fiabilité
+
+- Sauvegardes SQLite autonomes et vérifiées avant migration, restauration et installation.
+- Conservation des 20 dernières nouvelles sauvegardes automatiques ; copies manuelles et historiques conservées.
+- Restauration transactionnelle avec sauvegarde et vérification des références sous le même verrou.
+- Écran de récupération lorsque la base ne peut pas être ouverte, sans suppression automatique.
+- Téléchargements de mises à jour temporaires, bornés, contrôlés par taille, SHA-256 et signature liée à la version ; nouvelle vérification avant installation.
+- Diagnostics à la demande et export ZIP local sans base, avatars, images ni données d’authentification.
+- Journaux avec niveaux, rotation et masquage des informations sensibles.
+- Arrêt de la surveillance lors de la déconnexion, respect du délai VRChat entre requêtes et nettoyage du serveur local.
+- Écritures atomiques des exports et avertissement lors de l’abandon d’une release non enregistrée.
+
+Aucun nouveau schéma SQLite ni déplacement des données. Aucune réinitialisation nécessaire.

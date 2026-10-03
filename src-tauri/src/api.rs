@@ -252,7 +252,14 @@ pub async fn vrchat(
         if let Some(ref b) = body {
             request = request.json(b);
         }
+        let measured = std::time::Instant::now();
         let response = request.send().await;
+        crate::telemetry::record(
+            &app,
+            &operation,
+            &response,
+            measured.elapsed().as_millis() as u64,
+        );
         if operation == "logout" {
             *session = Session::with_profile(false, &session.profile)?;
             match credential(&session.profile)?.delete_credential() { Ok(()) | Err(keyring::Error::NoEntry)=>{},Err(_)=>return Err("Session cleared from memory, but credential store cleanup failed. Unlock the store and retry Logout.".into()) }

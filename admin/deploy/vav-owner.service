@@ -1,0 +1,34 @@
+[Unit]
+Description=VRC Avatar Vault owner statistics
+After=network.target
+
+[Service]
+Type=simple
+User=vav-owner
+Group=vav-owner
+WorkingDirectory=/opt/vav-owner
+EnvironmentFile=/etc/vav-owner.conf
+Environment=NODE_ENV=production
+Environment=VAV_ADMIN_DATA=/var/lib/vav-owner
+Environment=PORT=14830
+Environment=VAV_TRUST_LOCAL_PROXY=true
+ExecStart=/usr/bin/node /opt/vav-owner/server.mjs
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=15
+UMask=0077
+StateDirectory=vav-owner
+StateDirectoryMode=0700
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+CapabilityBoundingSet=
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+
+[Install]
+WantedBy=multi-user.target

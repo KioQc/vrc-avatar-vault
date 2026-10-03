@@ -1,0 +1,11 @@
+VAV 0.8.4 — Statistiques facultatives et confidentialité
+
+- Nouveau réglage de partage des statistiques, désactivé par défaut et soumis à un consentement explicite.
+- Partage limité à la version de VAV, aux sessions et aux compteurs de requêtes VRChat (opération, résultat, durée).
+- Aucun nom, e-mail, identifiant VRChat, avatar, contenu de requête ou donnée d’authentification dans les rapports.
+- Arrêt du partage et demande de suppression depuis les paramètres, avec nouvelle tentative si le serveur est indisponible.
+- Panneau propriétaire protégé pour consulter les statistiques agrégées, hébergé sur Cloudflare Workers et D1.
+- Informations de collecte, destination et durée de conservation visibles dans l’application.
+
+Les données locales, avatars, images et réglages existants sont conservés. Aucune réinitialisation ni migration du coffre requise.
+La participation est facultative. Cloudflare traite les métadonnées nécessaires à la connexion ; détails dans Settings > Confidentialité.

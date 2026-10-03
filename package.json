@@ -1,7 +1,7 @@
 {
   "name": "vrc-avatar-vault",
   "private": true,
-  "version": "0.8.3",
+  "version": "0.8.4",
   "type": "module",
   "scripts": {
     "dev": "vite --host 127.0.0.1",
@@ -13,10 +13,13 @@
     "tauri": "tauri",
     "desktop": "tauri dev",
     "desktop:build": "tauri build",
-    "check": "npm run typecheck && npm run lint && npm test && npm run test:discord && npm run build",
+    "check": "npm run typecheck && npm run lint && npm test && npm run test:discord && npm run test:admin && npm run build",
     "release:version": "node scripts/version.mjs",
     "release:package": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package-update.ps1",
-    "test:discord": "node --test scripts/tests/discord-post.check.mjs"
+    "test:discord": "node --test scripts/tests/discord-post.check.mjs",
+    "admin": "node admin/server.mjs",
+    "test:admin": "node admin/cloudflare/prepare.mjs && node --test --test-isolation=none admin/server.check.mjs admin/cloudflare/worker.check.mjs",
+    "admin:cloudflare:prepare": "node admin/cloudflare/prepare.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

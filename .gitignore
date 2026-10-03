@@ -15,3 +15,8 @@ src-tauri/gen/
 docs/*REQUEST.md
 .discord-delivery/
 *webhooks*.json
+.vav-admin/
+.wrangler/
+.dev.vars*
+admin/cloudflare/public/
+admin/cloudflare/schema.mjs

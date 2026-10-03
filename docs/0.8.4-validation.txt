@@ -1,0 +1,8 @@
+Vérifications de livraison 0.8.4
+
+- 74 tests frontend, 40 tests Rust, 11 tests serveur/local/Cloudflare et 3 tests Discord réussis (128 au total).
+- TypeScript, ESLint, compilation Vite et compilation Windows release réussis.
+- Installateur NSIS construit ; signatures Ed25519/Minisign et commentaire signé version:0.8.4 vérifiés indépendamment, ainsi que taille et SHA-256.
+- Adresse du collecteur kioqc vérifiée dans le binaire ; ancienne adresse personnelle et clé propriétaire absentes.
+- Aperçu 0.8.4-preview.2 validé par le propriétaire sur son PC. L’installateur stable 0.8.4 n’a pas été exécuté dans cette session.
+- Consentement désactivé par défaut ; aucune modification du schéma du coffre ni du dossier de données.

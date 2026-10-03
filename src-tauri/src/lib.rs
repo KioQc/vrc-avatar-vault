@@ -12,6 +12,7 @@ mod osc_monitor;
 mod preferences;
 mod project_scan;
 mod studio;
+mod telemetry;
 mod unity;
 mod updates;
 use tauri::Manager;
@@ -56,6 +57,7 @@ pub fn run() {
                 app.manage(integration::Integration::default());
                 app.manage(updates::Updates::default());
                 app.manage(online_updates::OnlineUpdates::default());
+                telemetry::start(app.handle(), root.clone());
                 logs::write(&root, "INFO", "Startup", "Vault opened successfully");
             } else {
                 logs::write(
@@ -69,6 +71,7 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             diagnostics::startup_status,
+            telemetry::participation,
             diagnostics::diagnostics,
             diagnostics::recovery_folder,
             api::vrchat,

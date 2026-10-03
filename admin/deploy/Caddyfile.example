@@ -1,0 +1,14 @@
+# Replace stats.example.com with the real DNS name before validation/reload.
+stats.example.com {
+    request_body {
+        max_size 16KB
+    }
+    reverse_proxy 127.0.0.1:14830 {
+        header_up X-VAV-Client-IP {remote_host}
+        transport http {
+            dial_timeout 3s
+            response_header_timeout 15s
+        }
+    }
+    # No access-log directive: do not persist client addresses or request headers.
+}

@@ -2,11 +2,13 @@
 
 Application desktop locale pour gérer les avatars VRChat, leurs versions de développement et leurs changelogs. Tauri 2, React, TypeScript strict, Vite, Tailwind CSS 4, composants shadcn/ui fondés sur Radix, Lucide, TanStack Query, Zustand, React Hook Form, Zod, date-fns et SQLite.
 
-## Version 0.8.1
+## Version publique 0.8.4
 
 [Télécharger la dernière version](https://github.com/KioQc/vrc-avatar-vault/releases/latest). Dépôt et versions publics ; aucun compte GitHub requis dans l’application.
 
-Installer : `release/VRC-Avatar-Vault-0.8.1-Setup.exe`. Portable : `release/VRC-Avatar-Vault-0.8.1.exe`. Données conservées dans le même dossier AppData lors des mises à jour.
+Installer : `release/VRC-Avatar-Vault-0.8.4-Setup.exe`. Portable : `release/VRC-Avatar-Vault-0.8.4.exe`. Données conservées dans le même dossier AppData lors des mises à jour.
+
+Nouveau en 0.8.4 : [panneau propriétaire Cloudflare et statistiques facultatives](docs/CLOUDFLARE-OWNER.md). Panneau disponible sur le sous-domaine neutre choisi par le propriétaire. Aucune collecte activée par défaut. L’ancien [aperçu local](docs/OWNER-PANEL.md) reste distinct.
 
 Studio disponible sous **Avatar → Development** : surveillance, snapshots/inspecteurs, bugs, sessions, dépendances et notes de version. [Fonctions et limites](EXTENSIONS.md). [Installer Unity Bridge](unity-bridge/com.vrcavatarvault.bridge/README.md). [Protocole local](docs/LOCAL-API.md).
 

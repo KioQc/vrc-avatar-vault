@@ -66,6 +66,10 @@ jobs:
           $names = @($release.assets.name)
           if ('latest.json' -notin $names -or -not ($names -match '\.exe$') -or -not ($names -match '\.sig$')) { throw 'Missing signed update assets' }
           $version = $env:RELEASE_TAG.Substring(1)
+          ./scripts/package-update.ps1 -NotesFile "docs/RELEASE-$version.txt"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          gh release upload $env:RELEASE_TAG "release/VRC-Avatar-Vault-$version-Setup.exe" "release/VRC-Avatar-Vault-$version-Setup.exe.sig" "release/latest.json" --clobber
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           gh release edit $env:RELEASE_TAG --notes-file "docs/RELEASE-$version.txt" --draft=false --latest
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       # Releases published by GITHUB_TOKEN do not trigger the release event workflow.

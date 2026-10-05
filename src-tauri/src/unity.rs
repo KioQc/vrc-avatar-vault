@@ -65,9 +65,61 @@ fn scan(path: &Path) -> Result<Value, String> {
         json!({"source":"filesystem","name":path.file_name().unwrap_or_default().to_string_lossy(),"unityVersion":version,"sdkVersion":sdk,"packages":packages.values().collect::<Vec<_>>(),"warnings":warnings}),
     )
 }
+fn creator_companion() -> Option<PathBuf> {
+    [
+        ("LOCALAPPDATA", "Programs/VRChat Creator Companion/CreatorCompanion.exe"),
+        ("ProgramFiles", "VRChat Creator Companion/CreatorCompanion.exe"),
+        ("ProgramFiles(x86)", "VRChat Creator Companion/CreatorCompanion.exe"),
+    ]
+    .into_iter()
+    .filter_map(|(key, relative)| std::env::var_os(key).map(|root| PathBuf::from(root).join(relative)))
+    .find(|exe| exe.is_file())
+}
+
+fn vcc_project_id(response: &Value, path: &Path) -> Result<Value, String> {
+    if response["success"] != true { return Err("VCC could not list its projects. Open VCC and check its error message.".into()); }
+    let projects = response["data"].as_array().ok_or("Unsupported VCC response")?;
+    let target = path.canonicalize().map_err(|_| "Linked project is unavailable")?;
+    for project in projects {
+        if project["Path"].as_str().and_then(|p| Path::new(p).canonicalize().ok()).as_ref() == Some(&target) {
+            let id = &project["ProjectId"];
+            if id.is_string() || id.is_number() { return Ok(id.clone()); }
+        }
+    }
+    Err("This project is not registered in VCC. Use Add Existing Project in VCC, then retry here.".into())
+}
+
+async fn open_through_vcc(path: &Path) -> Result<(), String> {
+    let mut headers = reqwest::header::HeaderMap::new();
+    headers.insert(reqwest::header::ORIGIN, reqwest::header::HeaderValue::from_static("http://localhost:5476"));
+    headers.insert(reqwest::header::REFERER, reqwest::header::HeaderValue::from_static("http://localhost:5476/"));
+    let client = reqwest::Client::builder().default_headers(headers).no_proxy().redirect(reqwest::redirect::Policy::none())
+        .timeout(std::time::Duration::from_secs(3)).build().map_err(|e| e.to_string())?;
+    // Loopback endpoint used by the installed VCC 2.4.5 frontend.
+    // Do not retry a launch POST: an uncertain response could otherwise open twice.
+    for _ in 0..10 {
+        if let Ok(response) = client.get("http://localhost:5477/api/projects").send().await {
+            if response.status().is_success() {
+                if let Ok(data) = response.json::<Value>().await {
+                    let id = vcc_project_id(&data, path)?;
+                    let response = client.post("http://localhost:5477/api/commands/openUnityProject")
+                        .json(&json!({"id":id})).timeout(std::time::Duration::from_secs(30)).send().await
+                        .map_err(|_| "VCC launch response unavailable. Check VCC before retrying.")?;
+                    if !response.status().is_success() { return Err("VCC refused to open the project. Check VCC before retrying.".into()); }
+                    let data = response.json::<Value>().await.map_err(|_| "Unrecognized launch response from VCC. Check VCC before retrying.")?;
+                    if data["success"] != true { return Err("VCC could not open the project. Check the editor and project settings in VCC.".into()); }
+                    return Ok(());
+                }
+            }
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+    }
+    Err("VCC's local service is unavailable or incompatible. Open the project from VCC; VAV will not start Unity directly.".into())
+}
+
 #[tauri::command]
-pub fn unity_project(
-    db: tauri::State<Database>,
+pub async fn unity_project(
+    db: tauri::State<'_, Database>,
     operation: String,
     avatar_id: String,
     path: Option<String>,
@@ -105,24 +157,9 @@ pub fn unity_project(
     }
     if operation == "open" {
         scan(&path)?;
-        let editor = preferences::setting(&db, "folder.unityEditor")?
-            .filter(|v| !v.is_empty())
-            .ok_or(
-                "Choose Unity.exe in Settings first. Use the editor version shown by this project.",
-            )?;
-        let exe = PathBuf::from(editor);
-        if !exe.is_file()
-            || !exe
-                .file_name()
-                .is_some_and(|v| v.to_string_lossy().eq_ignore_ascii_case("Unity.exe"))
-        {
-            return Err("Configured Unity editor is unavailable".into());
-        }
-        std::process::Command::new(exe)
-            .arg("-projectPath")
-            .arg(&path)
-            .spawn()
-            .map_err(|e| e.to_string())?;
+        let exe = creator_companion().ok_or("VCC was not found in its standard installation folders.")?;
+        std::process::Command::new(exe).spawn().map_err(|e| format!("Could not open VCC: {e}"))?;
+        open_through_vcc(&path).await?;
         db.conn.lock().map_err(|e| e.to_string())?.execute("UPDATE unity_projects SET last_opened=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE avatar_id=?1", [&avatar_id]).map_err(|e| e.to_string())?;
         return Ok(Value::Null);
     }
@@ -153,6 +190,17 @@ pub fn unity_project(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn vcc_launch_matches_registered_path_and_requires_success() {
+        let path = std::env::temp_dir().join(format!("vav-vcc-{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&path).unwrap();
+        let project = json!({"ProjectId":"registered-id","Path":path.to_string_lossy()});
+        assert_eq!(vcc_project_id(&json!({"success":true,"data":[project.clone()]}), &path).unwrap(), "registered-id");
+        assert!(vcc_project_id(&json!({"success":false,"data":[project]}), &path).is_err());
+        assert!(vcc_project_id(&json!({"success":true,"data":[]}), &path).is_err());
+        assert!(vcc_project_id(&json!({"success":true,"data":[{"ProjectId":null,"Path":path.to_string_lossy()}]}), &path).is_err());
+        std::fs::remove_dir(&path).unwrap();
+    }
     #[test]
     fn detects_versions_packages_and_missing_data_without_guessing() {
         let path = std::env::temp_dir().join(format!("vault-unity-{}", uuid::Uuid::new_v4()));

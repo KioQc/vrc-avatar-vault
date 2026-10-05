@@ -45,6 +45,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ''
+          VAV_TELEMETRY_URL: 'https://vav-owner.kioqc.workers.dev'
         with:
           tagName: ${{ github.ref_name }}
           releaseName: VRC Avatar Vault ${{ github.ref_name }}
@@ -68,7 +69,9 @@ jobs:
           $version = $env:RELEASE_TAG.Substring(1)
           ./scripts/package-update.ps1 -NotesFile "docs/RELEASE-$version.txt"
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          gh release upload $env:RELEASE_TAG "release/VRC-Avatar-Vault-$version-Setup.exe" "release/VRC-Avatar-Vault-$version-Setup.exe.sig" "release/latest.json" --clobber
+          $series = ($version.Split('.')[0..1] -join '.') + '.x'
+          $buildDir = "release/build/$series/$version"
+          gh release upload $env:RELEASE_TAG "$buildDir/VRC-Avatar-Vault-$version-Setup.exe" "$buildDir/VRC-Avatar-Vault-$version-Setup.exe.sig" "release/latest.json" --clobber
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           gh release edit $env:RELEASE_TAG --notes-file "docs/RELEASE-$version.txt" --draft=false --latest
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

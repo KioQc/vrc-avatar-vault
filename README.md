@@ -2,6 +2,8 @@
 
 Application desktop locale pour gérer les avatars VRChat, leurs versions de développement et leurs changelogs. Tauri 2, React, TypeScript strict, Vite, Tailwind CSS 4, composants shadcn/ui fondés sur Radix, Lucide, TanStack Query, Zustand, React Hook Form, Zod, date-fns et SQLite.
 
+Roadmap : [progression de 0.8.4 vers 1.0.0 et critères de validation](docs/ROADMAP-1.0.md).
+
 ## Version publique 0.8.4
 
 [Télécharger la dernière version](https://github.com/KioQc/vrc-avatar-vault/releases/latest). Dépôt et versions publics ; aucun compte GitHub requis dans l’application.

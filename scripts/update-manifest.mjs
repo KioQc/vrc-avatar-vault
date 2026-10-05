@@ -9,8 +9,9 @@ assert.match(version, /^\d+\.\d+\.\d+$/);
 const config = JSON.parse(readFileSync('src-tauri/tauri.conf.json', 'utf8'));
 assert.equal(config.version, version);
 const name = `VRC-Avatar-Vault-${version}-Setup.exe`;
-const bytes = readFileSync(`release/${name}`);
-const signature = readFileSync(`release/${name}.sig`, 'utf8').trim();
+const buildDir = `release/build/${version.split('.').slice(0, 2).join('.')}.x/${version}`;
+const bytes = readFileSync(`${buildDir}/${name}`);
+const signature = readFileSync(`${buildDir}/${name}.sig`, 'utf8').trim();
 assert(
   Buffer.from(signature, 'base64').toString().includes(`\tversion:${version}\n`),
   'Signature must bind this release version',

@@ -18,16 +18,18 @@ $notes = [IO.File]::ReadAllText((Resolve-Path -LiteralPath $NotesFile).Path)
 if ([string]::IsNullOrWhiteSpace($notes) -or $notes.Length -gt 12000) { throw 'Release notes must contain 1–12000 characters.' }
 $releaseDir = Join-Path $projectRoot 'release'
 [IO.Directory]::CreateDirectory($releaseDir) | Out-Null
+$series = ($version.Split('.')[0..1] -join '.') + '.x'
+$buildDir = Join-Path $releaseDir "build/$series/$version"
+[IO.Directory]::CreateDirectory($buildDir) | Out-Null
 $name = "VRC-Avatar-Vault-$version-Setup.exe"
-$destination = Join-Path $releaseDir $name
+$destination = Join-Path $buildDir $name
 Copy-Item -LiteralPath $installer -Destination $destination -Force
-Copy-Item -LiteralPath $portable -Destination (Join-Path $releaseDir "VRC-Avatar-Vault-$version.exe") -Force
-Copy-Item -LiteralPath $portable -Destination (Join-Path $releaseDir 'VRC-Avatar-Vault.exe') -Force
+Copy-Item -LiteralPath $portable -Destination (Join-Path $buildDir "VRC-Avatar-Vault-$version.exe") -Force
 $manifest = [ordered]@{ product='local.vrc-avatar-vault.app'; version=$version; installer=$name; sha256=(Get-FileHash -LiteralPath $destination -Algorithm SHA256).Hash.ToLowerInvariant(); size=(Get-Item -LiteralPath $destination).Length; notes=$notes.Trim(); signature=$signature }
 Copy-Item -LiteralPath $signaturePath -Destination ($destination + '.sig') -Force
 $manifestPath = Join-Path $releaseDir 'latest.vault-update.json'
 [IO.File]::WriteAllText($manifestPath, ($manifest | ConvertTo-Json -Depth 5), [Text.UTF8Encoding]::new($false))
-$zip = Join-Path $releaseDir "VRC-Avatar-Vault-$version-Update.zip"
+$zip = Join-Path $buildDir "VRC-Avatar-Vault-$version-Update.zip"
 Compress-Archive -LiteralPath @($destination, $manifestPath) -DestinationPath $zip -Force
 Write-Output "Update package ready: $zip"
 Write-Output 'Extract both files into the folder selected in Settings > Application updates.'

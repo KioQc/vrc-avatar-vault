@@ -1,0 +1,9 @@
+VAV 0.8.5 — Ouverture des projets avec VCC
+
+- Le bouton Open project via VCC ouvre désormais le projet par VRChat Creator Companion.
+- VAV recherche le projet enregistré dans VCC à partir de son chemin exact et vérifie que VCC accepte la demande.
+- Message explicite si le projet doit être ajouté à VCC ou si Creator Companion est indisponible.
+- Les fichiers de livraison sont classés par série et version dans release/build.
+
+Le projet doit déjà être ajouté dans VCC. L'ouverture utilise la configuration Unity de VCC.
+Les avatars, images et réglages locaux sont conservés.

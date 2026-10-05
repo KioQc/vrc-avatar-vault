@@ -3,7 +3,6 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { invoke } from '@tauri-apps/api/core';
 import { open } from '@tauri-apps/plugin-dialog';
-import { Link } from 'react-router-dom';
 import { query, desktop, mockMode } from '../../db/bridge';
 import { useAction } from '../../hooks/useVault';
 import { Button } from '../../components/ui/button';
@@ -15,6 +14,7 @@ interface Project {
 }
 export function UnityPanel({ avatarId }: { avatarId: string }) {
   const [search, setSearch] = useState('');
+  const [launchNotice, setLaunchNotice] = useState('');
   const project = useQuery({
     queryKey: ['unity-project', avatarId],
     queryFn: async () =>
@@ -29,6 +29,7 @@ export function UnityPanel({ avatarId }: { avatarId: string }) {
       ),
   });
   const action = useAction(async (operation: string) => {
+    setLaunchNotice('');
     let path: string | undefined;
     if (operation === 'link') {
       const dirs = await invoke<Record<string, { path: string }>>('path_preferences', {
@@ -44,6 +45,8 @@ export function UnityPanel({ avatarId }: { avatarId: string }) {
       path = selected;
     }
     await invoke('unity_project', { operation, avatarId, path: path ?? null });
+    if (operation === 'open')
+      setLaunchNotice('VCC accepted the request to open the linked project.');
   });
   const data: UnityProjectData | undefined = project.data
     ? JSON.parse(project.data.data_json)
@@ -63,6 +66,7 @@ export function UnityPanel({ avatarId }: { avatarId: string }) {
         </Button>
       </div>
       {project.error && <ErrorNotice error={project.error} />}
+      {action.error && <ErrorNotice error={action.error} />}
       {!data ? (
         <p className="notice">
           Select your project folder containing Assets, Packages and ProjectSettings. Your project
@@ -84,7 +88,7 @@ export function UnityPanel({ avatarId }: { avatarId: string }) {
           </dl>
           <div className="row wrap">
             {[
-              ['open', 'Open project'],
+              ['open', 'Open project via VCC'],
               ['folder', 'Open folder'],
               ['scan', 'Rescan project'],
               ['unlink', 'Unlink'],
@@ -94,10 +98,14 @@ export function UnityPanel({ avatarId }: { avatarId: string }) {
               </Button>
             ))}
           </div>
+          {launchNotice && (
+            <p className="notice" role="status">
+              {launchNotice}
+            </p>
+          )}
           <p className="tiny muted">
-            Choose a matching Unity.exe in <Link to="/settings">Settings</Link> before opening.
-            Opening Unity may import or upgrade assets; use the version shown above. Unlink keeps
-            dependency history.
+            VCC opens the registered project using its own editor settings. Add the project in VCC
+            first if it is not listed. Unlink keeps dependency history.
           </p>
           {data.warnings.map((w) => (
             <p className="notice" key={w}>

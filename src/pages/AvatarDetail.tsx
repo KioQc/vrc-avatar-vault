@@ -55,14 +55,27 @@ import { AvatarBadges } from '../components/AvatarBadges';
 import { JsonPanel } from '../features/avatars/JsonPanel';
 import { TechnicalPanel } from '../features/avatars/TechnicalPanel';
 import { OscPanel } from '../features/avatars/OscPanel';
-import { StudioPanel } from '../features/studio/StudioPanel';
+import { ReleaseNotesPanel } from '../features/studio/ReleaseNotesPanel';
 import { GalleryPanel } from '../features/avatars/GalleryPanel';
 export function AvatarDetail() {
   const online = useOnline();
   const { id = '' } = useParams(),
     navigate = useNavigate(),
     [params, setParams] = useSearchParams();
-  const tab = params.get('tab') ?? 'Overview';
+  const requestedTab = params.get('tab') ?? 'Overview';
+  const tab = requestedTab === 'Development' ? 'Unity'
+    : ['Parameters', 'FX', 'Performance'].includes(requestedTab) ? 'Inspectors' : requestedTab;
+  const sections = [
+    { name: 'Overview', tabs: ['Overview', 'Technical', 'JSON', 'OSC'] },
+    { name: 'Changes', tabs: ['Changelog'] },
+    { name: 'Releases', tabs: ['Versions', 'Release notes'] },
+    { name: 'Unity', tabs: ['Unity', 'Dependencies', 'Inspectors', 'Snapshots', 'Work'] },
+    { name: 'Bugs', tabs: ['Bugs'] },
+    { name: 'Notes', tabs: ['Notes'] },
+    { name: 'Files', tabs: ['Files'] },
+  ];
+  const section = sections.find((s) => s.tabs.includes(tab)) ?? sections[0];
+  const tabLabel = (value: string) => ({ Unity: 'Project', JSON: 'Raw JSON', Work: 'Work sessions', Technical: 'VRChat details' }[value] ?? value);
   const { data: workspace } = useWorkspace();
   const info = workspace?.avatars.find((a) => a.id === id);
   const { data: snapshots = [] } = useQuery({
@@ -236,16 +249,6 @@ export function AvatarDetail() {
           </Button>
         </div>
         <details className="action-menu">
-          <summary className="button secondary">Technical details</summary>
-          <div>
-            {['Technical', 'JSON', 'OSC', 'Dependencies', 'Work'].map((t) => (
-              <Button key={t} onClick={() => setParams({ tab: t })}>
-                {t === 'JSON' ? 'Raw avatar JSON' : t}
-              </Button>
-            ))}
-          </div>
-        </details>
-        <details className="action-menu">
           <summary className="button secondary">More actions</summary>
           <div>
             <Button onClick={() => update.mutate('archive')}>
@@ -274,38 +277,28 @@ export function AvatarDetail() {
         </details>
       </div>
       <div className="tabs" role="tablist" aria-label="Avatar sections">
-        {[
-          'Overview',
-          'Changelog',
-          'Versions',
-          'Bugs',
-          'Unity',
-          'Parameters',
-          'FX',
-          'Performance',
-          'Snapshots',
-          'Development',
-          'Notes',
-          'Files',
-        ].map((t) => (
+        {sections.map((s) => (
           <button
             role="tab"
-            aria-selected={tab === t}
-            key={t}
-            className={tab === t ? 'active' : ''}
-            onClick={() => setParams({ tab: t })}
+            aria-selected={section.name === s.name}
+            key={s.name}
+            className={section.name === s.name ? 'active' : ''}
+            onClick={() => setParams({ tab: s.tabs[0] })}
           >
-            {t === 'Changelog'
-              ? 'Changes'
-              : t === 'Versions'
-                ? 'Releases'
-                : t === 'Development'
-                  ? 'More tools'
-                  : t}
-            {t === 'Changelog' && <span>{changes.length}</span>}
+            {s.name}
+            {s.name === 'Changes' && <span>{changes.length}</span>}
           </button>
         ))}
       </div>
+      {section.tabs.length > 1 && (
+        <nav className="section-navigation" aria-label={`${section.name} tools`}>
+          {section.tabs.map((target) => (
+            <button key={target} aria-current={tab === target ? 'page' : undefined}
+              className={tab === target ? 'active' : ''}
+              onClick={() => setParams({ tab: target })}>{tabLabel(target)}</button>
+          ))}
+        </nav>
+      )}
       <div className="tab-content">
         {tab === 'Overview' && (
           <>
@@ -451,8 +444,9 @@ export function AvatarDetail() {
         {tab === 'Unity' && <UnityPanel avatarId={id} />}
         {tab === 'Work' && <WorkPanel avatarId={id} />}
         {tab === 'Dependencies' && <DependenciesPanel avatarId={id} />}
-        {['Parameters', 'FX', 'Performance'].includes(tab) && (
-          <SnapshotInspector key={tab} avatar={avatar} snapshots={snapshots} initialTab={tab} />
+        {tab === 'Inspectors' && (
+          <SnapshotInspector key={requestedTab} avatar={avatar} snapshots={snapshots}
+            initialTab={['Parameters', 'FX', 'Performance'].includes(requestedTab) ? requestedTab : 'Parameters'} />
         )}
         {tab === 'Snapshots' && (
           <>
@@ -464,7 +458,7 @@ export function AvatarDetail() {
         {tab === 'Technical' && <TechnicalPanel avatar={avatar} />}
         {tab === 'JSON' && <JsonPanel avatar={avatar} />}
         {tab === 'OSC' && <OscPanel avatar={avatar} />}
-        {tab === 'Development' && <StudioPanel avatar={avatar} />}
+        {tab === 'Release notes' && <ReleaseNotesPanel avatarId={id} />}
         {tab === 'Notes' && (
           <NotesPanel
             key={id}

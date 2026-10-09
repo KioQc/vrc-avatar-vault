@@ -3,7 +3,8 @@ VRC Avatar Vault 0.8.10 — Performances VRChat
 - Nouveau panneau d’analyse du build uploadé : performance, taille de téléchargement, taille décompressée et mémoire textures.
 - Statistiques organisées en géométrie, dynamique/contraintes et composants/effets.
 - Sélection PC, Quest ou iOS uniquement lorsque l’avatar possède un build natif correspondant ; les impostors sont exclus.
-- Lecture authentifiée de l’analyse de fichier VRChat, déclenchée par le bouton Fetch VRChat analysis ; nouvelle tentative en cas d’échec.
+- Lecture authentifiée de l’analyse de fichier VRChat automatiquement à l’ouverture de l’avatar, pour les derniers builds natifs de chaque plateforme.
+- Cache partagé de 15 minutes ; le bouton Refresh analysis permet d’actualiser ou de réessayer. Aucune requête automatique sans session VRChat ou hors ligne.
 - Couleurs et indicateurs par métrique basés sur les seuils officiels PC/mobile. Le rang global reste celui renvoyé par VRChat.
 - Icônes Good, Medium, Poor et Very Poor issues de la documentation VRChat ; étoile Excellent dessinée localement.
 - Une valeur absente reste indisponible et n’est jamais remplacée par zéro. L’analyse d’un upload récent peut ne pas être disponible immédiatement.

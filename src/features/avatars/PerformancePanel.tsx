@@ -7,6 +7,8 @@ import { analysisReference, metricValue, metricRank, record } from '../../utils/
 import { PerformanceRank } from '../../components/PerformanceRank';
 import { Button } from '../../components/ui/button';
 import { ErrorNotice } from '../../components/common';
+import { avatarAnalysisOptions, avatarAnalysisPackages } from '../../hooks/useAvatarAnalysis';
+import { useOnline } from '../../hooks/useOnline';
 const groups: [string, [string, string, string?][]][] = [
   [
     'Geometry',
@@ -54,19 +56,15 @@ const groups: [string, [string, string, string?][]][] = [
   ],
 ];
 export function PerformancePanel({ avatar }: { avatar: Avatar }) {
+  const online = useOnline();
   const packages = nativePackages(avatar.data);
   const platforms = [...new Set(packages.map((p) => p.platform))];
   const [selected, setSelected] = useState(platforms[0] ?? 'standalonewindows');
   const platform = platforms.includes(selected) ? selected : platforms[0];
-  const pkg = packages
-    .filter((p) => p.platform === platform)
-    .sort(
-      (a, b) =>
-        Date.parse(b.created_at) - Date.parse(a.created_at) ||
-        (a.variant === 'security' ? -1 : b.variant === 'security' ? 1 : 0),
-    )[0];
+  const pkg = avatarAnalysisPackages(avatar.data).find((p) => p.platform === platform);
   const ref = pkg ? analysisReference(pkg) : null;
   const query = useQuery({
+    ...(ref ? avatarAnalysisOptions(ref) : {}),
     queryKey: ['avatar-analysis', ref?.id, ref?.version, ref?.variant],
     queryFn: () => vrchat.getFileAnalysis(ref!.id, ref!.version, ref!.variant),
     enabled: false,
@@ -94,12 +92,11 @@ export function PerformancePanel({ avatar }: { avatar: Avatar }) {
               {platformName(p)}
             </Button>
           ))}
-          <Button disabled={!ref || query.isFetching} onClick={() => void query.refetch()}>
-            {query.isFetching
-              ? 'Loading…'
-              : query.isError
-                ? 'Retry analysis'
-                : 'Fetch VRChat analysis'}
+          <Button
+            disabled={!ref || !online || query.isFetching}
+            onClick={() => void query.refetch()}
+          >
+            {query.isFetching ? 'Loading…' : query.isError ? 'Retry analysis' : 'Refresh analysis'}
           </Button>
         </div>
       </div>
@@ -111,7 +108,9 @@ export function PerformancePanel({ avatar }: { avatar: Avatar }) {
       {!query.data && (
         <p className="notice">
           {ref
-            ? 'Load the analysis for this uploaded build. Recent uploads may still be processing or unavailable.'
+            ? query.isFetching
+              ? 'Loading uploaded build analysis…'
+              : 'Recent uploads may still be processing or unavailable. Connect VRChat to load their analysis automatically.'
             : 'No analysable native file is available for this platform.'}
         </p>
       )}

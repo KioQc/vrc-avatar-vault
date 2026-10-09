@@ -1,4 +1,5 @@
 import { useOnline } from '../hooks/useOnline';
+import { useAvatarAnalysis } from '../hooks/useAvatarAnalysis';
 import { PerformancePanel } from '../features/avatars/PerformancePanel';
 import { SnapshotTimeline } from '../features/studio/SnapshotTimeline';
 import { invoke } from '@tauri-apps/api/core';
@@ -85,6 +86,7 @@ export function AvatarDetail() {
   });
   const { data: avatars = [], isLoading, error } = useAvatars();
   const avatar = avatars.find((a) => a.id === id);
+  useAvatarAnalysis(avatar);
   useEffect(() => {
     if (!avatar) return;
     document.title = `VRC Avatar Vault — ${avatar.name}`;

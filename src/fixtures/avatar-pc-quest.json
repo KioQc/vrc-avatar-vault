@@ -12,6 +12,7 @@
   "unityPackages": [
     {
       "id": "pc-1",
+      "assetUrl": "https://api.vrchat.cloud/api/1/file/file_00000000-0000-4000-8000-000000000001/22/file",
       "platform": "standalonewindows",
       "assetVersion": 22,
       "unityVersion": "2022.3.22f1",
@@ -20,6 +21,7 @@
     },
     {
       "id": "quest-1",
+      "assetUrl": "https://api.vrchat.cloud/api/1/file/file_00000000-0000-4000-8000-000000000002/19/file",
       "platform": "android",
       "assetVersion": 19,
       "unityVersion": "2022.3.22f1",

@@ -55,6 +55,10 @@ export async function mockExecute(statements: Statement[]) {
   }
 }
 export function mockApi(operation: string, payload: Record<string, string>) {
+  if (operation === 'analysis') return {
+    performanceRating: 'VeryPoor', fileSize: 52.07 * 1048576, uncompressedSize: 143.22 * 1048576,
+    avatarStats: {totalPolygons:442873,totalVertices:329408,totalTextureUsage:263.9*1048576,skinnedMeshCount:29,meshCount:12,materialSlotsUsed:51,boneCount:489,blendShapeCount:265,bounds:[3,13.01,2.29],physBoneComponentCount:21,physBoneTransformCount:186,physBoneColliderCount:10,physBoneCollisionCheckCount:85,contactCount:26,constraintCount:102,constraintDepth:8,animatorCount:1,particleSystemCount:4}
+  };
   if (operation === 'own_avatars') {
     return Number(payload.offset ?? 0) === 0
       ? structuredClone([pcQuest, pcOnly, privateAvatar])

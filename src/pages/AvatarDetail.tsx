@@ -1,4 +1,5 @@
 import { useOnline } from '../hooks/useOnline';
+import { PerformancePanel } from '../features/avatars/PerformancePanel';
 import { SnapshotTimeline } from '../features/studio/SnapshotTimeline';
 import { invoke } from '@tauri-apps/api/core';
 import { useWorkspace } from '../components/workspace';
@@ -66,7 +67,7 @@ export function AvatarDetail() {
   const tab = requestedTab === 'Development' ? 'Unity'
     : ['Parameters', 'FX', 'Performance'].includes(requestedTab) ? 'Inspectors' : requestedTab;
   const sections = [
-    { name: 'Overview', tabs: ['Overview', 'Technical', 'JSON', 'OSC'] },
+    { name: 'Overview', tabs: ['Overview', 'Build performance', 'Technical', 'JSON', 'OSC'] },
     { name: 'Changes', tabs: ['Changelog'] },
     { name: 'Releases', tabs: ['Versions', 'Release notes'] },
     { name: 'Unity', tabs: ['Unity', 'Dependencies', 'Inspectors', 'Snapshots', 'Work'] },
@@ -357,6 +358,7 @@ export function AvatarDetail() {
               </section>
               <section className="panel">
                 <h2>Platform performance</h2>
+                <button className="text-button" onClick={() => setParams({ tab: 'Build performance' })}>View uploaded build performance →</button>
                 <div className="performance-summary">
                   <AvatarBadges avatar={avatar} />
                 </div>
@@ -455,6 +457,7 @@ export function AvatarDetail() {
             <UploadLinks avatarId={id} />
           </>
         )}
+        {tab === 'Build performance' && <PerformancePanel key={avatar.id} avatar={avatar} />}
         {tab === 'Technical' && <TechnicalPanel avatar={avatar} />}
         {tab === 'JSON' && <JsonPanel avatar={avatar} />}
         {tab === 'OSC' && <OscPanel avatar={avatar} />}

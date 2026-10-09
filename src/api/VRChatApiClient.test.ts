@@ -8,6 +8,14 @@ beforeEach(() => {
   vi.clearAllMocks();
   vrchat.clearCache();
 });
+it('restricts analysis requests to a validated file/version/variant', async () => {
+  expect(()=>vrchat.getFileAnalysis('https://evil.example',22,'security')).toThrow();
+  expect(()=>vrchat.getFileAnalysis('file_00000000-0000-4000-8000-000000000001',0,'security')).toThrow();
+  expect(invoke).not.toHaveBeenCalled();
+  vi.mocked(invoke).mockResolvedValue({avatarStats:{totalPolygons:442873}});
+  await vrchat.getFileAnalysis('file_00000000-0000-4000-8000-000000000001',22,'security');
+  expect(invoke).toHaveBeenCalledWith('vrchat',{operation:'analysis',payload:{id:'file_00000000-0000-4000-8000-000000000001',version:'22',variant:'security'}});
+});
 it('continues past short pages until empty and rejects repeated pages', async () => {
   const second = { ...fixture, id: 'avtr_00000000-0000-4000-8000-000000000002' };
   vi.mocked(invoke)

@@ -1,4 +1,5 @@
-import { Monitor, Glasses, Smartphone, GitBranch, Gauge } from 'lucide-react';
+import { Monitor, Glasses, Smartphone, GitBranch } from 'lucide-react';
+import { PerformanceRank } from './PerformanceRank';
 import type { Avatar } from '../types/domain';
 import { nativePerformance } from '../utils/domain';
 import { Badge } from './common';
@@ -27,8 +28,7 @@ export function AvatarBadges({ avatar }: { avatar: Avatar }) {
               API v{avatar.data.version}
             </Badge>
             <Badge tone={tone} title={`${p.platform} performanceRating: ${p.rating}`}>
-              <Gauge size={12} />
-              {p.label}
+              <PerformanceRank rating={p.rating} />
             </Badge>
           </div>
         );

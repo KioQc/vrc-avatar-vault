@@ -172,6 +172,17 @@ pub async fn vrchat(
             if offset > 10000 { return Err("Avatar offset limit exceeded".into()); }
             (Method::GET, format!("/avatars?user=me&releaseStatus=all&n=50&offset={offset}&sort=created&order=ascending"), None, None)
         }
+        "analysis" => {
+            let id = payload["id"].as_str().ok_or("File ID required")?;
+            if !id.starts_with("file_") || id.len() != 41 || uuid::Uuid::parse_str(&id[5..]).is_err() {
+                return Err("Invalid file ID".into());
+            }
+            let version = payload["version"].as_str().ok_or("File version required")?
+                .parse::<u32>().map_err(|_| "Invalid file version")?;
+            let variant = payload["variant"].as_str().ok_or("Variant required")?;
+            if !["security", "standard"].contains(&variant) || version == 0 { return Err("Invalid analysis variant or version".into()); }
+            (Method::GET, format!("/analysis/{id}/{version}/{variant}"), None, None)
+        }
         "world" => {
             let id = payload["id"].as_str().ok_or("World ID required")?;
             if !id.starts_with("wrld_")

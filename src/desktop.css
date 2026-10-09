@@ -1626,3 +1626,17 @@ body {
     -webkit-backdrop-filter: none;
   }
 }
+/* Uploaded VRChat build performance, distinct from Unity authored snapshots. */
+.performance-rank { display: inline-flex; align-items: center; gap: 6px; font-weight: 650; color: var(--muted); white-space: nowrap; }
+.rank-excellent { color: #65e24a; }
+.rank-good { color: #80cf60; }
+.rank-medium { color: #e7c348; }
+.rank-poor { color: #f49a35; }
+.rank-verypoor { color: #fa6248; }
+.performance-detail { display: grid; gap: 12px; }
+.performance-section { padding: 16px; }
+.performance-section h3 { border-bottom: 1px solid var(--border); padding-bottom: 10px; font-size: 12px; text-transform: uppercase; }
+.performance-metrics { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 20px; }
+.performance-metric { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-width: 0; padding: 9px 0; border-bottom: 1px solid var(--border); font-size: 12px; }
+.performance-metric > span:first-child { color: var(--muted); }
+@media (max-width: 850px) { .performance-metrics { grid-template-columns: 1fr; } }

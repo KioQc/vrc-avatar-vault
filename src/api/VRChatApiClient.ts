@@ -10,6 +10,7 @@ export interface VRChatApiClient {
   logout(): Promise<void>;
   getCurrentUser(): Promise<User>;
   getAvatar(id: string): Promise<ApiAvatar>;
+  getFileAnalysis(id: string, version: number, variant: string): Promise<unknown>;
   getOwnAvatars(offset?: number): Promise<ApiAvatar[]>;
   getAllOwnAvatars(onProgress?: (count: number) => void): Promise<ApiAvatar[]>;
   refreshAvatar(id: string): Promise<ApiAvatar>;
@@ -61,6 +62,11 @@ class DesktopVRChatClient implements VRChatApiClient {
     const cached = this.cache.get(id);
     if (cached && Date.now() - cached.time < this.ttl) return cached.value;
     return this.refreshAvatar(id);
+  }
+  getFileAnalysis(id: string, version: number, variant: string) {
+    if (!/^file_[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id) || !Number.isSafeInteger(version) || version < 1 || !['security', 'standard'].includes(variant))
+      throw new Error('Invalid file analysis request');
+    return this.call<unknown>('analysis', { id, version: String(version), variant });
   }
   async getOwnAvatars(offset = 0) {
     if (!Number.isInteger(offset) || offset < 0 || offset > 10000)

@@ -1,0 +1,10 @@
+VAV 0.8.7 — Import depuis le compte VRChat
+
+- Nouvelle source My VRChat avatars dans la fenêtre d’import.
+- Chargement des avatars uploadés sur le compte connecté, par pages de 50.
+- Recherche, sélection individuelle, sélection des résultats affichés et désélection.
+- Les avatars déjà présents sont identifiés et exclus de l’import.
+- Import par ID toujours disponible, avec sélection des aperçus.
+- Import local uniquement : aucune modification de l’avatar sur VRChat.
+
+Validation réelle de la liste du compte à effectuer dans l’application desktop avant publication.

@@ -1,0 +1,16 @@
+VRC Avatar Vault 0.8.9 — Import et bibliothèque
+
+- Import de tous les avatars du compte, publics et privés, avec pagination compacte.
+- Filtres par plateforme, visibilité, présence dans la bibliothèque, recherche et tri.
+- Sélection de tous les résultats filtrés, même sur plusieurs pages.
+- Actualisation facultative des avatars déjà importés, sans perdre les notes ni l’historique local.
+- Résumé des imports et nouvelle tentative limitée aux avatars en échec.
+- Collections locales : création, renommage, ajout et retrait des avatars sélectionnés.
+- Guide de démarrage : connexion VRChat, import et association d’un projet VCC.
+- État de synchronisation, date d’actualisation et actions rapides sur les cartes.
+- Copier l’identifiant, ouvrir la page VRChat et ouvrir le projet associé via VCC.
+- Réglages persistants : taille des cartes, grille/liste et réduction de transparence.
+- Choix français/anglais pour les nouveaux parcours et la navigation principale ; traduction des écrans avancés encore partielle.
+
+Validation : 80 tests frontend, 41 tests Rust, 3 tests Discord et 11 tests administration ; typecheck, lint et build réussis. Parcours d’import, collections et préférences vérifiés dans un aperçu avec données fictives, sans appels VRChat réels.
+Les données restent dans le dossier AppData existant. Une sauvegarde automatique précède l’installation de la mise à jour.

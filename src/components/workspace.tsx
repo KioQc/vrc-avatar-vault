@@ -28,6 +28,7 @@ import { AvatarImage } from './common';
 import { durationText } from '../utils/studio';
 import { studio } from '../services/studio';
 import type { WorkSession } from '../types/studio';
+import { useLocale } from '../hooks/useLocale';
 export function useWorkspace() {
   return useQuery({
     queryKey: ['workspace-summary'],
@@ -84,6 +85,7 @@ const groups = [
   },
 ] as const;
 export function AppSidebar() {
+  const { t } = useLocale();
   const { data: avatars = [] } = useAvatars();
   const location = useLocation();
   const current = avatars.find((a) => location.pathname === `/avatars/${a.id}`);
@@ -100,7 +102,7 @@ export function AppSidebar() {
       <nav>
         {groups.map((g) => (
           <div key={g.name}>
-            {g.name && <div className="sidebar-label">{g.name}</div>}
+            {g.name && <div className="sidebar-label">{t(g.name)}</div>}
             {g.items.map(([path, label, Icon]) => (
               <Link
                 title={label}
@@ -109,7 +111,7 @@ export function AppSidebar() {
                 className={`nav-link ${location.pathname + location.search === path || (path === '/avatars' && (!!current || (location.pathname === '/avatars' && !['Favorites', 'Archived'].includes(new URLSearchParams(location.search).get('filter') ?? '')))) ? 'active' : ''}`}
               >
                 <Icon size={16} />
-                <span>{label}</span>
+                <span>{t(label)}</span>
               </Link>
             ))}
           </div>
@@ -137,7 +139,7 @@ export function AppSidebar() {
       <div className="sidebar-bottom">
         <NavLink to="/settings" className="nav-link" title="Settings">
           <Settings size={16} />
-          <span>Settings</span>
+          <span>{t('Settings')}</span>
         </NavLink>
         <small className="muted">Local workspace · v{appVersion}</small>
       </div>

@@ -18,7 +18,10 @@ import { refreshAvatar, type DetectedUpdate } from '../services/sync';
 import { DiffDialog } from '../features/snapshots/DiffDialog';
 import { ChangeDialog } from '../features/changelogs/ChangeDialog';
 import { syncIntervalMs, syncFreshnessMs, syncBackoffMs } from '../utils/syncPolicy';
+import { GettingStarted } from '../components/GettingStarted';
+import { useLocale } from '../hooks/useLocale';
 export function AppLayout() {
+  const { t } = useLocale();
   const { data: settings, isSuccess: settingsReady } = useSettings(),
     { data: avatars = [], isSuccess: avatarsReady } = useAvatars();
   const user = useUI((s) => s.user),
@@ -123,6 +126,9 @@ export function AppLayout() {
     document.documentElement.dataset.sidebar = settings?.sidebar ?? 'expanded';
     document.documentElement.dataset.motion = settings?.reduceMotion ?? 'false';
     document.documentElement.dataset.dateFormat = settings?.dateFormat ?? 'friendly';
+    document.documentElement.lang = settings?.language === 'fr' ? 'fr' : 'en';
+    document.documentElement.dataset.transparency = settings?.reduceTransparency ?? 'false';
+    document.documentElement.dataset.cardSize = settings?.cardSize ?? 'large';
     vrchat.ttl = Number(settings?.ttl ?? 15) * 60000;
   }, [settings]);
   useEffect(() => {
@@ -241,6 +247,7 @@ export function AppLayout() {
               ))}
             </div>
           )}
+          <GettingStarted />
           <Outlet />
         </main>
         <StatusBar />
@@ -252,24 +259,24 @@ export function AppLayout() {
         onOpenChange={(v) => {
           if (!v) void welcome(false);
         }}
-        title="Welcome to VRC Avatar Vault"
+        title={t('Welcome to VRC Avatar Vault')}
         description="Keep track of your VRChat avatars, versions and changes."
       >
         <div className="welcome-steps">
           <p>
-            <span>01</span> Connect your VRChat account
+            <span>01</span> {t('Connect VRChat')}
           </p>
           <p>
-            <span>02</span> Import your first avatar
+            <span>02</span> {t('Import Avatar')}
           </p>
           <p>
-            <span>03</span> Start tracking changes
+            <span>03</span> {t('Link a VCC project')}
           </p>
         </div>
         <div className="dialog-actions">
-          <Button onClick={() => void welcome(false)}>Skip for now</Button>
+          <Button onClick={() => void welcome(false)}>{t('Skip for now')}</Button>
           <Button variant="default" onClick={() => void welcome(true)}>
-            Connect VRChat
+            {t('Connect VRChat')}
           </Button>
         </div>
       </Modal>

@@ -8,6 +8,33 @@ beforeEach(() => {
   vi.clearAllMocks();
   vrchat.clearCache();
 });
+it('continues past short pages until empty and rejects repeated pages', async () => {
+  const second = { ...fixture, id: 'avtr_00000000-0000-4000-8000-000000000002' };
+  vi.mocked(invoke)
+    .mockResolvedValueOnce([fixture])
+    .mockResolvedValueOnce([second])
+    .mockResolvedValueOnce([]);
+  expect(await vrchat.getAllOwnAvatars()).toHaveLength(2);
+  expect(invoke).toHaveBeenNthCalledWith(3, 'vrchat', {
+    operation: 'own_avatars',
+    payload: { offset: '2' },
+  });
+  vi.mocked(invoke).mockResolvedValue([fixture]);
+  await expect(vrchat.getAllOwnAvatars()).rejects.toThrow('repeated page');
+});
+it('loads a validated page of own avatars and rejects invalid pagination before IPC', async () => {
+  vi.mocked(invoke).mockResolvedValue([fixture]);
+  expect(await vrchat.getOwnAvatars(50)).toHaveLength(1);
+  expect(invoke).toHaveBeenLastCalledWith('vrchat', {
+    operation: 'own_avatars',
+    payload: { offset: '50' },
+  });
+  await expect(vrchat.getOwnAvatars(-1)).rejects.toThrow('offset');
+  await expect(vrchat.getOwnAvatars(1.5)).rejects.toThrow('offset');
+  expect(invoke).toHaveBeenCalledTimes(1);
+  vi.mocked(invoke).mockResolvedValue({ error: 'unexpected' });
+  await expect(vrchat.getOwnAvatars()).rejects.toThrow('invalid avatar list');
+});
 it('caches validated avatar reads and forces explicit refresh', async () => {
   vi.mocked(invoke).mockResolvedValue(fixture);
   await vrchat.getAvatar(fixture.id);

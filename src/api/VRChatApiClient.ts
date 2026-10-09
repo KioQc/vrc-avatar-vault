@@ -10,6 +10,8 @@ export interface VRChatApiClient {
   logout(): Promise<void>;
   getCurrentUser(): Promise<User>;
   getAvatar(id: string): Promise<ApiAvatar>;
+  getOwnAvatars(offset?: number): Promise<ApiAvatar[]>;
+  getAllOwnAvatars(onProgress?: (count: number) => void): Promise<ApiAvatar[]>;
   refreshAvatar(id: string): Promise<ApiAvatar>;
   renameAvatar(id: string, name: string): Promise<ApiAvatar>;
   clearCache(): void;
@@ -59,6 +61,28 @@ class DesktopVRChatClient implements VRChatApiClient {
     const cached = this.cache.get(id);
     if (cached && Date.now() - cached.time < this.ttl) return cached.value;
     return this.refreshAvatar(id);
+  }
+  async getOwnAvatars(offset = 0) {
+    if (!Number.isInteger(offset) || offset < 0 || offset > 10000)
+      throw new Error('Invalid avatar offset');
+    const result = await this.call<unknown>('own_avatars', { offset: String(offset) });
+    if (!Array.isArray(result)) throw new Error('VRChat returned an invalid avatar list');
+    return result.map(parseVRChatAvatar);
+  }
+  async getAllOwnAvatars(onProgress?: (count: number) => void) {
+    const avatars = new Map<string, ApiAvatar>();
+    let offset = 0;
+    while (offset <= 10000) {
+      const page = await this.getOwnAvatars(offset);
+      if (!page.length) return [...avatars.values()];
+      const previousCount = avatars.size;
+      for (const avatar of page) avatars.set(avatar.id, avatar);
+      if (avatars.size === previousCount)
+        throw new Error('VRChat returned a repeated page. Refresh the list and retry.');
+      offset += page.length;
+      onProgress?.(avatars.size);
+    }
+    throw new Error('Account avatar pagination limit reached. No partial list imported.');
   }
   async refreshAvatar(id: string) {
     if (!validateAvatarId(id)) throw new Error('Invalid avatar ID');

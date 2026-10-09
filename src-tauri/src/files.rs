@@ -6,6 +6,16 @@ use tauri::Manager;
 #[tauri::command]
 pub fn open_community() -> Result<(), String> {
     let url = "https://discord.gg/evvAZQzjPt";
+    open_public_url(url)
+}
+#[tauri::command]
+pub fn open_avatar_page(id: String) -> Result<(), String> {
+    if id.len() != 41 || !id.starts_with("avtr_") || uuid::Uuid::parse_str(&id[5..]).is_err() {
+        return Err("Invalid avatar ID".into());
+    }
+    open_public_url(&format!("https://vrchat.com/home/avatar/{id}"))
+}
+fn open_public_url(url: &str) -> Result<(), String> {
     #[cfg(target_os = "windows")]
     {
         use std::os::windows::process::CommandExt;

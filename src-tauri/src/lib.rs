@@ -85,6 +85,7 @@ pub fn run() {
             online_updates::online_update,
             files::add_attachment,
             files::open_community,
+            files::open_avatar_page,
             preferences::path_preferences,
             unity::unity_project,
             project_scan::scan_project,

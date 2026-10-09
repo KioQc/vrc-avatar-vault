@@ -55,6 +55,11 @@ export async function mockExecute(statements: Statement[]) {
   }
 }
 export function mockApi(operation: string, payload: Record<string, string>) {
+  if (operation === 'own_avatars') {
+    return Number(payload.offset ?? 0) === 0
+      ? structuredClone([pcQuest, pcOnly, privateAvatar])
+      : [];
+  }
   if (operation === 'avatar') {
     const fixture = [pcQuest, pcOnly, privateAvatar].find((a) => a.id === payload.id);
     if (!fixture)

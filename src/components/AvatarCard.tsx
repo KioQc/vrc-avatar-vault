@@ -9,15 +9,20 @@ import { platforms } from '../utils/domain';
 import { useAction, useFavorite } from '../hooks/useVault';
 import { repository } from '../db/repository';
 import { useAttachmentUrl } from '../services/files';
+import { AvatarQuickActions } from './AvatarQuickActions';
+import { useLocale } from '../hooks/useLocale';
 export function AvatarCard({
   avatar,
   selected,
   onSelect,
+  projectLinked,
 }: {
   avatar: Avatar;
   selected?: boolean;
   onSelect?: (checked: boolean) => void;
+  projectLinked?: boolean;
 }) {
+  const { t } = useLocale();
   const navigate = useNavigate();
   const contextAction = useAction(async (kind: string) => {
     if (kind === 'archive')
@@ -57,8 +62,8 @@ export function AvatarCard({
           </span>
         </Link>
         <div className="card-quick">
-          <Link to={`/avatars/${avatar.id}`}>Open</Link>
-          <Link to={`/avatars/${avatar.id}?action=change`}>Add change</Link>
+          <Link to={`/avatars/${avatar.id}`}>{t('Open')}</Link>
+          <Link to={`/avatars/${avatar.id}?action=change`}>{t('Add change')}</Link>
           <Link to={`/avatars/${avatar.id}?tab=Unity`}>Unity</Link>
         </div>
         <div className="card-body">
@@ -95,6 +100,7 @@ export function AvatarCard({
             )}
           </div>
           <p className="tiny muted">Updated {timeAgo(avatar.updated_at)}</p>
+          <AvatarQuickActions avatar={avatar} projectLinked={projectLinked} />
         </div>
       </article>
     </ContextMenu>

@@ -166,6 +166,12 @@ pub async fn vrchat(
         }
         "session" => (Method::GET, "/auth/user".into(), None, None),
         "profile" => (Method::GET, "/auth/user".into(), None, None),
+        "own_avatars" => {
+            let offset = payload["offset"].as_str().unwrap_or("0")
+                .parse::<u32>().map_err(|_| "Invalid avatar offset")?;
+            if offset > 10000 { return Err("Avatar offset limit exceeded".into()); }
+            (Method::GET, format!("/avatars?user=me&releaseStatus=all&n=50&offset={offset}&sort=created&order=ascending"), None, None)
+        }
         "world" => {
             let id = payload["id"].as_str().ok_or("World ID required")?;
             if !id.starts_with("wrld_")
@@ -224,7 +230,7 @@ pub async fn vrchat(
         }
         _ => return Err("Operation is not allowed".into()),
     };
-    let retryable = ["avatar", "session", "profile", "world"].contains(&operation.as_str());
+    let retryable = ["avatar", "own_avatars", "session", "profile", "world"].contains(&operation.as_str());
     for attempt in 0..=3 {
         let cooldown = session
             .next_allowed

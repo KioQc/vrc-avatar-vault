@@ -1,0 +1,9 @@
+VAV 0.8.8 — Import complet et compact
+
+- Correction du filtre VRChat : recherche des avatars du compte avec tous les statuts, dont privés.
+- Chargement automatique de toutes les pages API, sans arrêt sur une page courte.
+- Liste compacte avec huit avatars par page, compteur et navigation numérotée.
+- Recherche sur la liste chargée ; sélection conservée entre les pages.
+- Détection des pages répétées pour éviter un chargement infini.
+
+Les avatars, images et réglages existants sont conservés.

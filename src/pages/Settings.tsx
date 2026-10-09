@@ -21,7 +21,9 @@ import { exportBackup, readBackup, restoreBackup, type Backup } from '../service
 import { openFolder } from '../services/files';
 import { vrchat } from '../api/VRChatApiClient';
 import { desktop, mockMode } from '../db/bridge';
+import { useLocale } from '../hooks/useLocale';
 export function Settings() {
+  const { t } = useLocale();
   const { data: settings = {} } = useSettings();
   const [incrementDraft, setIncrementDraft] = useState<string | null>(null);
   const increment = incrementDraft ?? settings.releaseIncrement ?? '0.1.0';
@@ -66,7 +68,7 @@ export function Settings() {
     <>
       <div className="page-heading">
         <div>
-          <h1>Settings</h1>
+          <h1>{t('Settings')}</h1>
           <p>Make this workspace your own.</p>
         </div>
       </div>
@@ -119,7 +121,62 @@ export function Settings() {
           <UpdateCenter />
         </details>
         <section className="panel">
-          <h2>Appearance</h2>
+          <h2>{t('Appearance')}</h2>
+          {(
+            [
+              [
+                'language',
+                'Language',
+                [
+                  ['en', 'English'],
+                  ['fr', 'Français'],
+                ],
+              ],
+              [
+                'cardSize',
+                'Card size',
+                [
+                  ['large', 'Large'],
+                  ['small', 'Small'],
+                ],
+              ],
+              [
+                'libraryView',
+                'Default view',
+                [
+                  ['grid', 'Grid'],
+                  ['list', 'List'],
+                ],
+              ],
+              [
+                'reduceTransparency',
+                'Reduce transparency',
+                [
+                  ['false', 'Off'],
+                  ['true', 'On'],
+                ],
+              ],
+            ] as const
+          ).map(([key, label, options]) => (
+            <div className="settings-row" key={key}>
+              <strong>{t(label)}</strong>
+              <select
+                aria-label={t(label)}
+                disabled={setting.isPending}
+                value={settings[key] ?? options[0][0]}
+                onChange={(e) => save(key, e.target.value)}
+              >
+                {options.map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {t(label)}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ))}
+          <Button disabled={setting.isPending} onClick={() => save('setupDismissed', 'false')}>
+            {t('Show setup guide')}
+          </Button>
           {[
             ['density', 'Density', ['compact', 'comfortable']],
             ['sidebar', 'Sidebar', ['expanded', 'compact']],

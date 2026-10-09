@@ -12,17 +12,24 @@ import {
   Tag,
   Trash2,
 } from 'lucide-react';
-import { useAvatars, useAction } from '../hooks/useVault';
+import { useAvatars, useAction, useSettings } from '../hooks/useVault';
+import { LibraryCollections } from '../components/LibraryCollections';
+import { readCollections } from '../utils/library';
+import { useLocale } from '../hooks/useLocale';
 import { useUI } from '../stores/ui';
 import { Button } from '../components/ui/button';
 import { Modal } from '../components/ui/dialog';
 import { AvatarCard } from '../components/AvatarCard';
+import { AvatarQuickActions } from '../components/AvatarQuickActions';
 import { Badge, Empty, ErrorNotice, Loading, timeAgo } from '../components/common';
 import { platforms } from '../utils/domain';
 import { repository } from '../db/repository';
 import { refreshAvatar } from '../services/sync';
 import { exportBackup } from '../services/backup';
 export function Avatars() {
+  const { data: settings = {} } = useSettings();
+  const { t } = useLocale();
+  const saveView = useAction((value: string) => repository.setting('libraryView', value));
   const { data: avatars = [], isLoading, error } = useAvatars(),
     setImport = useUI((s) => s.setImport);
   const [params, setParams] = useSearchParams();
@@ -30,7 +37,11 @@ export function Avatars() {
   const search = params.get('q') ?? '',
     filter = params.get('filter') ?? 'All',
     sort = params.get('sort') ?? 'Last modified',
-    view = params.get('view') ?? 'grid';
+    view = params.get('view') ?? settings.libraryView ?? 'grid';
+  const collection = params.get('collection') ?? '';
+  const collectionIds = readCollections(settings.collections).find(
+    (c) => c.id === collection,
+  )?.avatarIds;
   const changeParam = (key: string, value: string) =>
     setParams(
       (prev) => {
@@ -43,7 +54,10 @@ export function Avatars() {
   const setSearch = (v: string) => changeParam('q', v),
     setFilter = (v: string) => changeParam('filter', v),
     setSort = (v: string) => changeParam('sort', v),
-    setView = (v: string) => changeParam('view', v);
+    setView = (v: string) => {
+      changeParam('view', v);
+      saveView.mutate(v);
+    };
   const [selected, setSelected] = useState<string[]>([]),
     [tag, setTag] = useState(''),
     [dialog, setDialog] = useState<'tag' | 'delete' | null>(null),
@@ -72,6 +86,7 @@ export function Avatars() {
       const p = platforms(a.data);
       return (
         (filter === 'Archived' ? !!a.archived : !a.archived) &&
+        (!collection || !!collectionIds?.includes(a.id)) &&
         `${a.name} ${a.vrchat_id} ${a.tags.join(' ')}`
           .toLowerCase()
           .includes(search.toLowerCase()) &&
@@ -79,7 +94,7 @@ export function Avatars() {
           ? !!a.favorite
           : filter === 'PC + Quest'
             ? p.includes('PC') && p.includes('Quest')
-            : ['PC', 'Quest'].includes(filter)
+            : ['PC', 'Quest', 'iOS'].includes(filter)
               ? p.includes(filter)
               : ['Public', 'Private'].includes(filter)
                 ? a.data.releaseStatus.toLowerCase() === filter.toLowerCase()
@@ -109,11 +124,11 @@ export function Avatars() {
           <h1>
             Avatars <span className="heading-count">{avatars.length}</span>
           </h1>
-          <p>Your collection, versioned and organized.</p>
+          <p>{t('Your collection, versioned and organized.')}</p>
         </div>
         <Button variant="default" onClick={() => setImport(true)}>
           <Plus size={16} />
-          Import Avatar
+          {t('Import Avatar')}
         </Button>
       </div>
       <div className="toolbar">
@@ -141,7 +156,9 @@ export function Avatars() {
         </div>
         <select aria-label="Sort avatars" value={sort} onChange={(e) => setSort(e.target.value)}>
           {['Last modified', 'Name', 'Created', 'VRChat update', 'Custom version'].map((v) => (
-            <option key={v}>{v}</option>
+            <option key={v} value={v}>
+              {t(v)}
+            </option>
           ))}
         </select>
         <Button
@@ -163,25 +180,41 @@ export function Avatars() {
           <List size={16} />
         </Button>
       </div>
+      <LibraryCollections
+        active={collection}
+        selected={selected}
+        onChange={(id) => {
+          changeParam('collection', id);
+          setPage(0);
+        }}
+      />
       <details className="filter-popover">
         <summary className="button secondary">
           Filters {filter !== 'All' ? `· ${filter}` : ''}
         </summary>
         <div className="filter-row">
-          {['All', 'Favorites', 'PC', 'Quest', 'PC + Quest', 'Public', 'Private', 'Archived'].map(
-            (f) => (
-              <button
-                className={filter === f ? 'active' : ''}
-                onClick={() => {
-                  setFilter(f);
-                  setPage(0);
-                }}
-                key={f}
-              >
-                {f}
-              </button>
-            ),
-          )}
+          {[
+            'All',
+            'Favorites',
+            'PC',
+            'Quest',
+            'iOS',
+            'PC + Quest',
+            'Public',
+            'Private',
+            'Archived',
+          ].map((f) => (
+            <button
+              className={filter === f ? 'active' : ''}
+              onClick={() => {
+                setFilter(f);
+                setPage(0);
+              }}
+              key={f}
+            >
+              {t(f)}
+            </button>
+          ))}
         </div>
       </details>
       {selected.length > 0 && (
@@ -218,6 +251,7 @@ export function Avatars() {
                 avatar={a}
                 selected={selected.includes(a.id)}
                 onSelect={(v) => choose(a.id, v)}
+                projectLinked={!!workspace?.avatars.find((w) => w.id === a.id)?.project}
               />
             ))}
           </div>
@@ -241,6 +275,7 @@ export function Avatars() {
                   <th>Platforms</th>
                   <th>Unity</th>
                   <th>Changes</th>
+                  <th>{t('Refresh')}</th>
                   <th>
                     <button className="text-button" onClick={() => setSort('Last modified')}>
                       Modified ↕
@@ -275,6 +310,12 @@ export function Avatars() {
                         : 'Not linked'}
                     </td>
                     <td>{workspace?.avatars.find((w) => w.id === a.id)?.changes ?? 0}</td>
+                    <td>
+                      <AvatarQuickActions
+                        avatar={a}
+                        projectLinked={!!workspace?.avatars.find((w) => w.id === a.id)?.project}
+                      />
+                    </td>
                     <td>{timeAgo(a.updated_at)}</td>
                   </tr>
                 ))}
@@ -291,13 +332,13 @@ export function Avatars() {
       )}
       <div className="pagination">
         <Button disabled={page === 0} onClick={() => setPage(page - 1)}>
-          Previous
+          {t('Previous')}
         </Button>
         <span>
           {page + 1} / {Math.max(1, Math.ceil(rows.length / 24))}
         </span>
         <Button disabled={(page + 1) * 24 >= rows.length} onClick={() => setPage(page + 1)}>
-          Next
+          {t('Next')}
         </Button>
       </div>
       <Modal

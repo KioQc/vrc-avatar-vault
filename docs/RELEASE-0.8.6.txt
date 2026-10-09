@@ -1,0 +1,11 @@
+VAV 0.8.6 — Navigation et interface
+
+- Fiche avatar organisée en sept sections : Overview, Changes, Releases, Unity, Bugs, Notes et Files.
+- Projet, dépendances, inspecteurs, snapshots et sessions de travail regroupés sous Unity.
+- Suppression du panneau More tools qui répétait les sections existantes.
+- Détails VRChat, JSON et OSC accessibles sous Overview ; notes de release sous Releases.
+- Anciens liens Parameters, FX, Performance et Development conservés.
+- Surfaces translucides, arrière-plan coloré discret, flou sur la navigation et onglets plus lisibles.
+- Surfaces opaques lorsque le système demande de réduire la transparence.
+
+Les avatars, images, réglages et données locales sont conservés.

@@ -1,0 +1,15 @@
+VRC Avatar Vault 0.9.0-preview.3 — Unity workflow & VRCFury
+
+- Détection des packages installés directement par VCC via Packages/*/package.json, dont VRCFury, version installée et nom lisible.
+- Unity Bridge 0.1.1 : lecture séparée des menus, sous-menus et paramètres référencés par les composants VRCFury Full Controller; références objRef et GUID:fileID; déclarations de toggles et origine.
+- Onglet VRCFury dans les inspecteurs Unity, recherche, valeurs, source et export JSON. Les entrées authored ne sont pas assimilées aux paramètres finaux générés au build.
+- Résumé depuis la dernière release à partir du snapshot lié à cette release, sans dépendre d'une baseline manuelle plus récente.
+- Dépendances manuelles : recherche et modification complète des versions, liens, chemins et notes.
+- Fichiers : ouvrir le dossier contenant le fichier, copier son chemin et Locate asset dans Unity Bridge.
+- Renommages : index des empreintes pour les projets volumineux; pas de rapprochement automatique lorsque les empreintes sont ambiguës.
+- Baselines d'un ancien projet ignorées après changement de projet. Comparaison des packages filtrée sur le projet actuel.
+- Explication des snapshots : métadonnées de comparaison, pas copies des assets ni restauration du projet.
+
+Vérification : 90 tests frontend, 42 tests Rust, compilation du Bridge contre Unity 2022.3.22f1 et extraction exécutée dans un projet Unity isolé avec fixtures SerializedReference, GUID, sous-menu et objet inactif.
+À valider sur un vrai avatar VRCFury/VCC avant une stable : résultats de différentes versions VRCFury, parcours natif VCC, installation et conservation des données. Le résultat final transformé après build n'est pas capturé par le Bridge 0.1.1.
+Preview locale, aucune publication GitHub ou Discord.

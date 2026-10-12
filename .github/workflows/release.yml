@@ -9,6 +9,8 @@ concurrency:
   cancel-in-progress: false
 jobs:
   windows:
+    # This release is built, signed and verified locally; keep its assets intact.
+    if: github.ref_name != 'v0.9.0'
     runs-on: windows-latest
     timeout-minutes: 60
     steps:

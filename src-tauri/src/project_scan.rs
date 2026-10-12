@@ -159,27 +159,21 @@ fn equivalent(a: &FileInfo, b: &FileInfo) -> bool {
 pub fn diff(old: &Tree, new: &Tree) -> Vec<Value> {
     let mut result = Vec::new();
     let mut moved = std::collections::BTreeSet::new();
+    let mut old_counts = BTreeMap::<(String,u64),usize>::new();
+    let mut candidates = BTreeMap::<(String,u64),Vec<&String>>::new();
+    for info in old.values() { if let Some(hash)=&info.hash { *old_counts.entry((hash.clone(),info.size)).or_default()+=1; } }
+    for (path,info) in new { if !old.contains_key(path) { if let Some(hash)=&info.hash { candidates.entry((hash.clone(),info.size)).or_default().push(path); } } }
     for (path, prev) in old {
         match new.get(path) {
             Some(next) if !equivalent(prev, next) => result.push(
                 json!({"type":"Modified","path":path,"kind":next.kind,"before":prev,"after":next}),
             ),
             None => {
-                let matches: Vec<_> = new
-                    .iter()
-                    .filter(|(p, n)| {
-                        !old.contains_key(*p)
-                            && prev.hash.is_some()
-                            && n.hash == prev.hash
-                            && n.size == prev.size
-                    })
-                    .collect();
-                let old_count = old
-                    .values()
-                    .filter(|n| n.hash == prev.hash && n.size == prev.size)
-                    .count();
+                let key=prev.hash.as_ref().map(|hash|(hash.clone(),prev.size));
+                let matches=key.as_ref().and_then(|k|candidates.get(k)).map(Vec::as_slice).unwrap_or(&[]);
+                let old_count=key.as_ref().and_then(|k|old_counts.get(k)).copied().unwrap_or(0);
                 if matches.len() == 1 && old_count == 1 {
-                    let (next, _) = matches[0];
+                    let next = matches[0];
                     moved.insert(next.clone());
                     result.push(
                         json!({"type":"Renamed","path":next,"oldPath":path,"kind":prev.kind}),
@@ -213,14 +207,16 @@ pub fn project_path(db: &Database, id: &str) -> Result<String, String> {
 pub fn scan_project(db: tauri::State<Database>, avatar_id: String) -> Result<Value, String> {
     let path = project_path(&db, &avatar_id)?;
     let baseline:Option<String>=db.conn.lock().map_err(|e|e.to_string())?.query_row("SELECT s.data_json FROM project_watch w JOIN studio_snapshots s ON s.id=w.baseline_id WHERE w.avatar_id=?1",[&avatar_id],|r|r.get(0)).optional().map_err(|e|e.to_string())?;
-    let base: Tree = baseline
+    let base: Option<Tree> = baseline
         .and_then(|s| serde_json::from_str::<Value>(&s).ok())
-        .and_then(|v| serde_json::from_value(v["files"].clone()).ok())
-        .unwrap_or_default();
+        .filter(|v| v["projectPath"] == path)
+        .and_then(|v| serde_json::from_value(v["files"].clone()).ok());
+    let has_baseline=base.is_some();
+    let base=base.unwrap_or_default();
     let files = scan(Path::new(&path), &base)?;
     let changes = diff(&base, &files);
     Ok(
-        json!({"schemaVersion":1,"source":"filesystem","projectPath":path,"files":files,"changes":changes,"hasBaseline":!base.is_empty()}),
+        json!({"schemaVersion":1,"source":"filesystem","projectPath":path,"projectMetadata":crate::unity::scan(Path::new(&path))?,"files":files,"changes":changes,"hasBaseline":has_baseline}),
     )
 }
 #[cfg(test)]

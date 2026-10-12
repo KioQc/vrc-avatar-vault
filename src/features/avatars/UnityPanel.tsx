@@ -127,25 +127,36 @@ export function UnityPanel({ avatarId }: { avatarId: string }) {
                   <th>Version / reference</th>
                   <th>Type</th>
                   <th>Source</th>
+                  <th>Location / URL</th>
                 </tr>
               </thead>
               <tbody>
                 {data.packages
-                  .filter((p) => p.name.toLowerCase().includes(search.toLowerCase()))
+                  .filter((p) =>
+                    `${p.name} ${p.displayName ?? ''}`.toLowerCase().includes(search.toLowerCase()),
+                  )
                   .map((p) => (
                     <tr key={p.name}>
-                      <td className="break-all">{p.name}</td>
+                      <td className="break-all">
+                        <strong>{p.displayName ?? p.name}</strong>
+                        {p.displayName && <small className="muted"> · {p.name}</small>}
+                      </td>
                       <td className="break-all">{p.version}</td>
                       <td>{p.type}</td>
-                      <td>{p.source}</td>
+                      <td>
+                        {p.source}
+                        {p.origin ? ` · ${p.origin}` : ''}
+                      </td>
+                      <td className="break-all">{p.location || p.reference || '—'}</td>
                     </tr>
                   ))}
               </tbody>
             </table>
           </div>
           <p className="tiny muted">
-            Manifest declarations and lockfile versions. Assets imported directly into Assets are
-            not inferred. No prefab, performance or hierarchy data is invented.
+            Manifest declarations, lockfile versions and installed package metadata, including
+            VRCFury. Assets imported directly into Assets are not inferred. No prefab, performance
+            or hierarchy data is invented.
           </p>
         </>
       )}

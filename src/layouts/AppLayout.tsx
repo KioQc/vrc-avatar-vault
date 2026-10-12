@@ -263,6 +263,7 @@ export function AppLayout() {
         description="Keep track of your VRChat avatars, versions and changes."
       >
         <div className="welcome-steps">
+          <img className="welcome-logo" src="/branding/vav-wordmark.png" alt="VRC Avatar Vault" />
           <p>
             <span>01</span> {t('Connect VRChat')}
           </p>

@@ -6,8 +6,8 @@ import path from 'node:path';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const version = process.argv[2];
-if (!/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.test(version ?? '')) {
-  throw new Error('Usage: npm run release:version -- 0.7.0 (stable semantic version)');
+if (!/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-preview\.[1-9]\d*)?$/.test(version ?? '')) {
+  throw new Error('Usage: npm run release:version -- 0.9.0 or 0.9.0-preview.1');
 }
 for (const name of ['package.json', 'package-lock.json', 'src-tauri/tauri.conf.json']) {
   const file = path.join(root, name);

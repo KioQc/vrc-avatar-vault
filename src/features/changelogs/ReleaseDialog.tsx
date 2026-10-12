@@ -16,10 +16,12 @@ export function ReleaseDialog({
   avatar,
   changes,
   onClose,
+  onCreated,
 }: {
   avatar: Avatar;
   changes: Change[];
   onClose: () => void;
+  onCreated?: (version: string) => void;
 }) {
   const { data: settings = {} } = useSettings();
   const [mode, setMode] = useState<string | null>(null);
@@ -50,6 +52,7 @@ export function ReleaseDialog({
     if (!savedVersion) {
       await repository.createRelease(avatar.id, version, title, notes, selected);
       setSavedVersion(version);
+      onCreated?.(version);
     }
     if (renameRemote && avatar.vrchat_id) {
       const data = await vrchat.renameAvatar(avatar.vrchat_id, versionedName(avatar.name, version));

@@ -1,4 +1,8 @@
 import { AvatarBadges } from '../../components/AvatarBadges';
+import { VrcFuryInspector } from './VrcFuryInspector';
+import { InspectorTree } from '../../components/InspectorTree';
+import { combinedExpressionMenus } from '../../utils/expressionMenus';
+import { parameterReferences } from '../../utils/parameterReferences';
 import { Modal } from '../../components/ui/dialog';
 import { useState } from 'react';
 import { useSettings } from '../../hooks/useVault';
@@ -86,22 +90,22 @@ function MenuTree({ menu, menus, visited = [] }: { menu: Row; menus: Row[]; visi
   if (visited.includes(id) || visited.length > 12)
     return <p className="tiny muted">{str(menu.name)} · linked menu</p>;
   return (
-    <ul className="expression-tree">
-      <li>
-        <strong>{str(menu.name)}</strong>
-        <ul>
-          {rows(menu.controls).map((c, i) => {
-            const sub = menus.find((m) => m.id === c.submenuId);
-            return (
-              <li key={i}>
-                {str(c.name)} <span className="muted">{str(c.type)}</span>
-                {sub && <MenuTree menu={sub} menus={menus} visited={[...visited, id]} />}
-              </li>
-            );
-          })}
-        </ul>
-      </li>
-    </ul>
+    <details className="inspector-tree-node" open={visited.length === 0}>
+      <summary>
+        {str(menu.name)} <small className="muted">{rows(menu.controls).length} controls</small>
+      </summary>
+      <ul className="expression-tree inspector-tree-children">
+        {rows(menu.controls).map((c, i) => {
+          const sub = menus.find((m) => m.id === c.submenuId);
+          return (
+            <li key={i}>
+              {str(c.name)} <span className="muted">{str(c.type)}</span>
+              {sub && <MenuTree menu={sub} menus={menus} visited={[...visited, id]} />}
+            </li>
+          );
+        })}
+      </ul>
+    </details>
   );
 }
 export function SnapshotInspector({
@@ -116,7 +120,7 @@ export function SnapshotInspector({
   const [parameter, setParameter] = useState<Row | null>(null),
     [parameterFilter, setParameterFilter] = useState('All'),
     [diffFilter, setDiffFilter] = useState('All'),
-    [menuMode, setMenuMode] = useState('Visual');
+    [menuMode, setMenuMode] = useState('Tree');
   const technical = snapshots.filter((s) => s.kind === 'technical');
   const [chosen, setChosen] = useState(''),
     [previous, setPrevious] = useState(''),
@@ -138,9 +142,17 @@ export function SnapshotInspector({
   const cost = costs.some((x) => x === null)
     ? null
     : costs.reduce<number>((a, b) => a + (b ?? 0), 0);
-  const menus = rows(data?.menus),
+  const menus = combinedExpressionMenus(
+      data?.menus,
+      (data?.vrcfury as Record<string, unknown> | undefined)?.menus,
+    ),
     menu = menus.find((m) => m.id === menuId) ?? menus[0];
   const controllers = rows(data?.controllers);
+  const references = parameterReferences(
+    [...parameters, ...rows((data?.vrcfury as Row | undefined)?.parameters)],
+    menus,
+    controllers,
+  );
   const parameterNames = new Set(parameters.map((p) => p.name));
   const checks = data ? questChecks(data, rules) : [];
   const platforms = ['PC', 'Quest', 'iOS'];
@@ -205,6 +217,7 @@ export function SnapshotInspector({
         {[
           'Parameters',
           'Menus',
+          'VRCFury',
           'Hierarchy',
           'FX',
           'Descriptor',
@@ -225,6 +238,7 @@ export function SnapshotInspector({
         </p>
       ) : (
         <>
+          {['Parameters', 'Menus', 'VRCFury'].includes(tab) && <VrcFuryInspector data={data} />}
           {['Parameters', 'Menus', 'Hierarchy', 'FX'].includes(tab) && (
             <input
               placeholder="Search this inspector…"
@@ -235,6 +249,26 @@ export function SnapshotInspector({
           )}
           {tab === 'Parameters' && (
             <>
+              <details className="panel">
+                <summary>
+                  Parameter checks · {references.duplicates.length} duplicate inputs ·{' '}
+                  {references.unresolved.length} unresolved menu references
+                </summary>
+                <p className="notice">
+                  Advisory checks on authored inputs. VRCFury may merge duplicates or generate
+                  unresolved names at build; these are not final SDK errors.
+                </p>
+                {references.duplicates.map((p) => (
+                  <p key={p.name}>
+                    {p.name} · {p.count} declarations
+                  </p>
+                ))}
+                {references.unresolved.map((p) => (
+                  <p key={p.name}>
+                    {p.name} · {p.menus.join(', ')}
+                  </p>
+                ))}
+              </details>
               <p>
                 Network budget:{' '}
                 <strong>
@@ -269,10 +303,9 @@ export function SnapshotInspector({
                 </select>
                 <span className="tiny muted">Select a parameter to inspect usage and history.</span>
               </div>
-              <Table
-                onSelect={setParameter}
-                fields={['name', 'type', 'defaultValue', 'saved', 'synced', 'networkCost']}
-                data={parameters
+              <InspectorTree
+                searching={!!search.trim()}
+                entries={parameters
                   .filter(
                     (p) =>
                       String(p.name).toLowerCase().includes(search.toLowerCase()) &&
@@ -281,7 +314,18 @@ export function SnapshotInspector({
                         (parameterFilter === 'Synced' && p.synced === true) ||
                         p.type === parameterFilter),
                   )
-                  .map((p) => ({ ...p, networkCost: parameterCost(p, rules) }))}
+                  .map((p, i) => ({
+                    id: String(p.id ?? i),
+                    path: String(p.name ?? 'Unnamed'),
+                    label: String(p.type ?? 'Unknown'),
+                    content: (
+                      <Table
+                        onSelect={setParameter}
+                        fields={['name', 'type', 'defaultValue', 'saved', 'synced', 'networkCost']}
+                        data={[{ ...p, networkCost: parameterCost(p, rules) }]}
+                      />
+                    ),
+                  }))}
               />
               <p className="tiny muted">
                 Rules {rules.version}. Configurable in Settings. Built-in animator parameters are
@@ -291,8 +335,20 @@ export function SnapshotInspector({
           )}
           {tab === 'Menus' && (
             <>
+              <p className="notice">
+                This tree includes the Avatar Descriptor menus and referenced VRCFury menus, with
+                their source. It is a combined view of authored inputs, not the final menu
+                transformed by VRCFury during build. Generated toggle declarations remain in the
+                VRCFury inspector.
+              </p>
               <div className="row wrap">
                 {menus
+                  .filter(
+                    (m) =>
+                      !menus.some((parent) =>
+                        rows(parent.controls).some((c) => c.submenuId === m.id),
+                      ) || menu?.id === m.id,
+                  )
                   .filter((m) => String(m.name).toLowerCase().includes(search.toLowerCase()))
                   .map((m) => (
                     <Button key={String(m.id)} onClick={() => setMenuId(String(m.id))}>
@@ -348,16 +404,27 @@ export function SnapshotInspector({
           )}
           {tab === 'Hierarchy' && (
             <>
-              {rows(data?.hierarchy)
-                .filter((n) => str(n.path).toLowerCase().includes(search.toLowerCase()))
-                .map((n) => (
-                  <details key={String(n.id)}>
-                    <summary>
-                      {str(n.path)} · {rows(n.components).length} components
-                    </summary>
-                    <Table fields={['type', 'id', 'properties']} data={rows(n.components)} />
-                  </details>
-                ))}
+              <InspectorTree
+                searching={!!search.trim()}
+                entries={rows(data?.hierarchy)
+                  .filter((n) =>
+                    `${str(n.path)} ${JSON.stringify(n.components)}`
+                      .toLowerCase()
+                      .includes(search.toLowerCase()),
+                  )
+                  .map((n, i) => ({
+                    id: String(n.id ?? i),
+                    path: str(n.path),
+                    label: `${rows(n.components).length} components`,
+                    content: rows(n.components).map((c, j) => (
+                      <details className="inspector-component" key={j}>
+                        <summary>{str(c.type)}</summary>
+                        <p className="tiny muted break-all">{str(c.id)}</p>
+                        <pre className="json-view">{JSON.stringify(c.properties, null, 2)}</pre>
+                      </details>
+                    )),
+                  }))}
+              />
             </>
           )}
           {tab === 'FX' && (
@@ -433,6 +500,7 @@ export function SnapshotInspector({
                       'materials',
                       'descriptor',
                       'menus',
+                      'vrcfury',
                     ].map((v) => (
                       <option key={v}>{v}</option>
                     ))}
@@ -627,6 +695,9 @@ export function SnapshotInspector({
                 <p key={i}>{str(c.name)}</p>
               ))}
             <h3>Menu usage</h3>
+            {(references.usages[String(parameter.name)]?.menus ?? []).map((source, i) => (
+              <p key={`usage-${i}`}>{source}</p>
+            ))}
             {menus.flatMap((m) =>
               rows(m.controls)
                 .filter(

@@ -1,0 +1,11 @@
+VRC Avatar Vault 0.9.0-preview.1 — Unity Workflow foundations
+
+- Nouvelle identité visuelle : logos fournis intégrés à la barre latérale, au démarrage et au favicon ; icône Windows et installateur régénérés.
+- Nouvelle vue Unity Workflow : Avatar → Project → Changes → Snapshot → Release.
+- État du watcher, date du dernier scan, baseline et lots de fichiers à revoir réunis dans la vue du projet.
+- Création rapide d’un snapshot de fichiers et définition volontaire d’une baseline à partir du projet courant.
+- Accès direct aux dépendances, aux comparaisons et aux releases, en utilisant les systèmes existants.
+- Meilleure distinction des dépendances UPM, VPM, Git et locales ; affichage des chemins et références lorsqu’ils sont fournis par les manifests.
+- Support des numéros de preview pour préparer progressivement la 0.9.0.
+
+Cette preview commence la 0.9.0, sans publication stable. VCC reste prioritaire pour ouvrir les projets. Les snapshots stockent métadonnées et empreintes, pas une copie complète du projet Unity. Les assets non déclarés restent à renseigner manuellement. Le Bridge 0.2 et le Smart Changelog font partie des étapes suivantes de la roadmap.

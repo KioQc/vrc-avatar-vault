@@ -1,0 +1,8 @@
+VRC Avatar Vault 0.9.0-preview.4 — Inspector trees
+- Hiérarchie Unity réellement imbriquée par chemin, avec noms courts, indentation et branches repliables.
+- Paramètres regroupés par leurs segments de chemin, détails repliés par défaut.
+- VRCFury : regroupement des paramètres et composants par objet source; menus et sous-menus imbriqués, protection contre les références cycliques.
+- Mode Tree par défaut pour les menus du descriptor; le mode visuel reste disponible.
+- Composants et JSON repliables : suppression du tableau très étroit avec IDs et propriétés affichés en permanence.
+- Recherche conserve les ancêtres et ouvre les branches correspondantes dans les arbres de chemins.
+Vérification : 92 tests frontend, lint et compilation de production. Aucun changement de stockage ou de Bridge requis par rapport à preview.3.

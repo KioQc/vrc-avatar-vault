@@ -1,0 +1,12 @@
+VRC Avatar Vault 0.9.0-preview.2 — Files & release preparation
+
+- Explorateur de changements de fichiers : dossiers, recherche des chemins actuels et anciens, filtres ajout/modification/suppression/renommage, types de fichiers, détails et pagination.
+- Comparaison des dépendances par nom, version, source et emplacement contre la baseline ou un snapshot de packages choisi.
+- Les nouveaux snapshots de fichiers conservent aussi les métadonnées du projet et des packages pour les futures comparaisons.
+- Écran Prepare release dans Unity : changelog non publié, lots à revoir, dernier snapshot, dernière release et contrôle du dossier/manifests/SDK.
+- Création d’un snapshot de préparation et accès direct aux fichiers à vérifier.
+- Après une release locale, proposition facultative d’un snapshot associé à cette release et d’une nouvelle baseline, pour les avatars liés à un projet.
+- Aucun changement détecté n’est ajouté automatiquement au changelog ; aucune release n’est créée sans action explicite.
+
+Les anciennes baselines sans métadonnées de packages restent utilisables pour les fichiers. Choisir un snapshot de dépendances ou créer une nouvelle baseline pour comparer les packages.
+Preview locale : parcours natif sur un projet VCC réel à valider avant publication stable.

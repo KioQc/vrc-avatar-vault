@@ -1,7 +1,7 @@
 {
   "name": "com.vrcavatarvault.bridge",
-  "version": "0.1.0",
-  "displayName": "VRC Avatar Vault \u2014 Unity Bridge",
+  "version": "0.2.0",
+  "displayName": "VRC Avatar Vault — Unity Bridge",
   "description": "Local authenticated integration and read-only avatar snapshots for VRC Avatar Vault.",
   "unity": "2022.3",
   "dependencies": {

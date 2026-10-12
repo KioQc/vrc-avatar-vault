@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { FileChangesExplorer } from './FileChangesExplorer';
 import { useQuery } from '@tanstack/react-query';
 import { invoke } from '@tauri-apps/api/core';
 import { query, desktop, mockMode } from '../../db/bridge';
@@ -7,7 +8,8 @@ import { readText, saveText } from '../../services/files';
 import { useAction } from '../../hooks/useVault';
 import { Button } from '../../components/ui/button';
 import { ErrorNotice } from '../../components/common';
-import { suggestions, structuredDiff } from '../../utils/studio';
+import { suggestions } from '../../utils/studio';
+import { compareFileTrees } from '../../utils/workflow';
 import type { FileChange, ScanData, StudioSnapshot } from '../../types/studio';
 export function ProjectHistory({
   avatarId,
@@ -85,7 +87,7 @@ export function ProjectHistory({
   const a = files.find((s) => s.id === compareA),
     b = files.find((s) => s.id === compareB);
   const diffs =
-    a && b ? structuredDiff(JSON.parse(a.data_json).files, JSON.parse(b.data_json).files) : [];
+    a && b ? compareFileTrees(JSON.parse(a.data_json).files, JSON.parse(b.data_json).files) : [];
   return (
     <section className="panel">
       <h2>Project changes & snapshots</h2>
@@ -151,15 +153,12 @@ export function ProjectHistory({
           <Button disabled={action.isPending} onClick={() => action.mutate('save')}>
             Save metadata snapshot
           </Button>
-          <details>
-            <summary>Review files</summary>
-            {scan.changes.slice(0, 500).map((c) => (
-              <p key={c.path}>
-                {c.type} · {c.oldPath ? `${c.oldPath} → ` : ''}
-                {c.path}
-              </p>
-            ))}
-          </details>
+          <FileChangesExplorer
+            avatarId={avatarId}
+            projectPath={scan.projectPath}
+            changes={scan.changes}
+            title="Changes since baseline"
+          />
         </>
       )}
       <h3>Development sessions to review</h3>
@@ -184,14 +183,12 @@ export function ProjectHistory({
                   </span>
                 ))}
               </div>
-              <details>
-                <summary>File list</summary>
-                {changes.slice(0, 500).map((c) => (
-                  <p key={c.path}>
-                    {c.type} · {c.path}
-                  </p>
-                ))}
-              </details>
+              <FileChangesExplorer
+                avatarId={avatarId}
+                projectPath={JSON.parse(batch.data_json).projectPath}
+                changes={changes}
+                title="Files in this work batch"
+              />
               {suggestions(changes).map((s) => (
                 <div className="notice" key={s.title}>
                   <strong>{s.title}</strong>
@@ -223,6 +220,11 @@ export function ProjectHistory({
           );
         })}
       <h3>Saved snapshots</h3>
+      <p className="notice">
+        Filesystem snapshots record file hashes, paths and package metadata for comparisons. They do
+        not copy your project assets and cannot restore a deleted Unity file. A baseline is a
+        comparison reference, not a project backup.
+      </p>
       {snapshots.map((s) => (
         <details key={s.id}>
           <summary>
@@ -287,11 +289,14 @@ export function ProjectHistory({
           ))}
         </select>
       </div>
-      {diffs.slice(0, 300).map((d, i) => (
-        <p key={i}>
-          <strong>{d.kind}</strong> {d.path}: {JSON.stringify(d.before)} → {JSON.stringify(d.after)}
-        </p>
-      ))}
+      {a && b && (
+        <FileChangesExplorer
+          avatarId={avatarId}
+          projectPath={JSON.parse(b.data_json).projectPath}
+          changes={diffs}
+          title={`${a.label} → ${b.label}`}
+        />
+      )}
     </section>
   );
 }

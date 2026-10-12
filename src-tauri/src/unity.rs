@@ -16,7 +16,7 @@ fn read(path: &Path) -> Result<Option<String>, String> {
         .map(Some)
         .map_err(|e| e.to_string())
 }
-fn scan(path: &Path) -> Result<Value, String> {
+pub(crate) fn scan(path: &Path) -> Result<Value, String> {
     if !path.is_absolute()
         || !["Assets", "Packages", "ProjectSettings"]
             .iter()
@@ -52,10 +52,36 @@ fn scan(path: &Path) -> Result<Value, String> {
                         .as_str()
                         .or_else(|| d["version"].as_str())
                         .unwrap_or("Unknown");
-                    packages.insert(id.clone(), json!({"name":id,"version":version,"source":file,"type":if file == "vpm-manifest.json" {"VPM"} else {"UPM"}}));
+                    let origin = d["source"].as_str().unwrap_or("");
+                    let package_type = if file == "vpm-manifest.json" { "VPM" }
+                        else if origin == "git" || version.starts_with("git+") || version.contains(".git") { "Git" }
+                        else if ["local", "embedded"].contains(&origin) || version.starts_with("file:") { "Local" }
+                        else { "UPM" };
+                    let location = d["path"].as_str().or_else(|| version.strip_prefix("file:")).unwrap_or("");
+                    let reference = d["url"].as_str().unwrap_or("");
+                    packages.insert(id.clone(), json!({"name":id,"version":version,"source":file,"type":package_type,"origin":origin,"location":location,"reference":reference}));
                 }
             }
         }
+    }
+    // VCC installs package folders directly; their installed metadata is the
+    // authoritative version even when the top-level UPM manifest omits them.
+    for entry in std::fs::read_dir(path.join("Packages")).map_err(|e| e.to_string())? {
+        let entry = entry.map_err(|e| e.to_string())?;
+        if !entry.file_type().map_err(|e| e.to_string())?.is_dir() { continue; }
+        let metadata_path = entry.path().join("package.json");
+        let Some(text) = read(&metadata_path)? else { continue; };
+        let data: Value = match serde_json::from_str(text.trim_start_matches('\u{feff}')) {
+            Ok(v) => v,
+            Err(_) => { warnings.push(format!("Invalid Packages/{}/package.json", entry.file_name().to_string_lossy())); continue; }
+        };
+        let Some(id) = data["name"].as_str().filter(|n| !n.is_empty()) else { continue; };
+        let location = format!("Packages/{}", entry.file_name().to_string_lossy());
+        let package = packages.entry(id.to_string()).or_insert_with(|| json!({"name":id,"version":"Unknown","type":if data.get("vpmDependencies").is_some(){"VPM"}else{"Embedded"},"source":format!("{location}/package.json")}));
+        if let Some(version) = data["version"].as_str() { package["version"] = json!(version); }
+        package["location"] = json!(location);
+        package["displayName"] = data["displayName"].as_str().map_or(json!(id), |v|json!(v));
+        if let Some(url) = data["documentationUrl"].as_str() { package["reference"] = json!(url); }
     }
     let sdk = packages
         .get("com.vrchat.avatars")
@@ -64,6 +90,23 @@ fn scan(path: &Path) -> Result<Value, String> {
     Ok(
         json!({"source":"filesystem","name":path.file_name().unwrap_or_default().to_string_lossy(),"unityVersion":version,"sdkVersion":sdk,"packages":packages.values().collect::<Vec<_>>(),"warnings":warnings}),
     )
+}
+fn project_file_folder(root: &Path, relative: &str) -> Result<PathBuf, String> {
+    let relative = Path::new(relative);
+    if relative.as_os_str().is_empty() || relative.components().any(|c| !matches!(c, std::path::Component::Normal(_))) {
+        return Err("Choose a relative project file path".into());
+    }
+    let root = root.canonicalize().map_err(|_| "Linked project unavailable")?;
+    let file = root.join(relative);
+    let parent = file.parent().ok_or("File has no folder")?.canonicalize().map_err(|_| "This folder no longer exists")?;
+    if !parent.starts_with(&root) { return Err("File folder is outside the linked project".into()); }
+    Ok(parent)
+}
+#[tauri::command]
+pub fn unity_file_folder(db: tauri::State<'_, Database>, avatar_id: String, relative_path: String, project_path: String) -> Result<(), String> {
+    let root = PathBuf::from(crate::project_scan::project_path(&db, &avatar_id)?);
+    if root.canonicalize().ok() != Path::new(&project_path).canonicalize().ok() { return Err("This snapshot belongs to another project".into()); }
+    preferences::open_directory(project_file_folder(&root, &relative_path)?)
 }
 fn creator_companion() -> Option<PathBuf> {
     [
@@ -191,6 +234,20 @@ pub async fn unity_project(
 mod tests {
     use super::*;
     #[test]
+    fn detects_installed_vrcfury_and_rejects_paths_outside_project() {
+        let path = std::env::temp_dir().join(format!("vav-fury-{}", uuid::Uuid::new_v4()));
+        for d in ["Assets/Avatar", "Packages/com.vrcfury.vrcfury", "ProjectSettings"] { std::fs::create_dir_all(path.join(d)).unwrap(); }
+        std::fs::write(path.join("Packages/com.vrcfury.vrcfury/package.json"), r#"{"name":"com.vrcfury.vrcfury","displayName":"VRCFury","version":"1.2.3","vpmDependencies":{},"documentationUrl":"https://vrcfury.com"}"#).unwrap();
+        let data = scan(&path).unwrap();
+        assert_eq!(data["packages"][0]["version"], "1.2.3");
+        assert_eq!(data["packages"][0]["type"], "VPM");
+        assert_eq!(data["packages"][0]["displayName"], "VRCFury");
+        assert!(project_file_folder(&path, "Assets/Avatar/deleted.prefab").is_ok());
+        assert!(project_file_folder(&path, "../private.txt").is_err());
+        assert!(project_file_folder(&path, "C:/private.txt").is_err());
+        std::fs::remove_dir_all(path).unwrap();
+    }
+    #[test]
     fn vcc_launch_matches_registered_path_and_requires_success() {
         let path = std::env::temp_dir().join(format!("vav-vcc-{}", uuid::Uuid::new_v4()));
         std::fs::create_dir_all(&path).unwrap();
@@ -216,7 +273,7 @@ mod tests {
         .unwrap();
         std::fs::write(
             path.join("Packages/manifest.json"),
-            r#"{"dependencies":{"com.test":"1.2.0"}}"#,
+            r#"{"dependencies":{"com.test":"1.2.0","com.local":"file:../LocalPackage","com.git":"https://example.com/package.git#v1"}}"#,
         )
         .unwrap();
         std::fs::write(
@@ -227,7 +284,10 @@ mod tests {
         let data = scan(&path).unwrap();
         assert_eq!(data["unityVersion"], "2022.3.22f1");
         assert_eq!(data["sdkVersion"], "3.9.0");
-        assert_eq!(data["packages"].as_array().unwrap().len(), 2);
+        assert_eq!(data["packages"].as_array().unwrap().len(), 4);
+        let packages = data["packages"].as_array().unwrap();
+        assert_eq!(packages.iter().find(|p| p["name"] == "com.local").unwrap()["location"], "../LocalPackage");
+        assert_eq!(packages.iter().find(|p| p["name"] == "com.git").unwrap()["type"], "Git");
         std::fs::write(path.join("Packages/manifest.json"), "bad json").unwrap();
         assert_eq!(
             scan(&path).unwrap()["warnings"].as_array().unwrap().len(),

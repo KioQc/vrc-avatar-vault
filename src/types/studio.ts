@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import type { UnityProjectData } from './unity';
 const node = z.record(z.string(), z.unknown());
 export const technicalSchema = z
   .object({
@@ -69,6 +70,7 @@ export interface FileChange {
   oldPath?: string;
 }
 export interface ScanData {
+  projectMetadata?: UnityProjectData;
   source: string;
   schemaVersion: number;
   projectPath: string;

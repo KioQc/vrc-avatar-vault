@@ -1,4 +1,5 @@
 use crate::{db::Database, studio};
+use rusqlite::OptionalExtension;
 use serde_json::{json, Value};
 use std::{
     io::{Read, Write},
@@ -223,7 +224,7 @@ fn route(
     let path = req.path.split('?').next().unwrap_or("");
     if req.method == "GET" && path == "/api/v1/status" {
         return Ok(
-            json!({"protocolVersion":1,"appVersion":env!("CARGO_PKG_VERSION"),"capabilities":["avatars","snapshots","changes","releases","sessions","events-poll","presence"]}),
+            json!({"protocolVersion":1,"appVersion":env!("CARGO_PKG_VERSION"),"capabilities":["avatars","snapshots","changes","releases","sessions","events-poll","presence","commands","automatic-snapshots"]}),
         );
     }
     if req.method == "GET" && path == "/api/v1/events" {
@@ -250,7 +251,24 @@ fn route(
             return Err("Incompatible protocol; version 1 required".into());
         }
         let safe = json!({"project":studio::text(&req.body,"project",250)?,"scene":studio::text(&req.body,"scene",250)?,"avatar":req.body["avatar"].as_str().unwrap_or("").chars().take(250).collect::<String>(),"at":SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_secs()});
-        *presence.lock().map_err(|e| e.to_string())? = safe;
+        let mut safe=safe;
+        safe["avatarId"]=json!(req.body["avatarId"].as_str().unwrap_or("").chars().take(100).collect::<String>());
+        safe["projectPath"]=json!(req.body["projectPath"].as_str().unwrap_or("").chars().take(2000).collect::<String>());
+        let mut live=presence.lock().map_err(|e|e.to_string())?;
+        for field in ["command","lastResult","lastCapture"] { if let Some(v)=live.get(field) {safe[field]=v.clone();} }
+        *live = safe;
+        return Ok(json!({"ok":true}));
+    }
+    if req.method=="GET" && path=="/api/v1/commands" {
+        let live=presence.lock().map_err(|e|e.to_string())?;
+        let now=SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_secs();
+        return Ok(json!({"command":live.get("command").filter(|c|c["expires"].as_u64().unwrap_or(0)>now)}));
+    }
+    if req.method=="POST" && path=="/api/v1/commands/result" {
+        let mut live=presence.lock().map_err(|e|e.to_string())?;
+        if live["command"]["id"]!=req.body["id"] || req.body["id"].as_str().is_none(){return Err("Unknown command".into());}
+        live["lastResult"]=json!({"id":req.body["id"],"ok":req.body["ok"]==true,"message":req.body["message"].as_str().unwrap_or("").chars().take(500).collect::<String>()});
+        live["command"]=Value::Null;
         return Ok(json!({"ok":true}));
     }
     let parts: Vec<_> = path.trim_matches('/').split('/').collect();
@@ -275,7 +293,23 @@ fn route(
                 "sessions" => studio::operation(db, "session_start", &p),
                 "snapshots" => {
                     p["kind"] = json!("technical");
-                    studio::operation(db, "snapshot", &p)
+                    if !p["data"].is_object(){return Err("Snapshot data must be an object".into());} let automatic=p["automatic"]==true;
+                    if automatic {
+                        let request=studio::text(&p,"requestId",100)?.to_owned();
+                        if uuid::Uuid::parse_str(&request).is_err(){return Err("Invalid automatic request ID".into());}
+                        let conn=db.conn.lock().map_err(|e|e.to_string())?;
+                        let existing:Option<String>=conn.query_row("SELECT id FROM studio_snapshots WHERE avatar_id=?1 AND json_extract(data_json,'$.automaticRequestId')=?2",[avatar,request.as_str()],|r|r.get(0)).optional().map_err(|e|e.to_string())?;
+                        if let Some(id)=existing{return Ok(json!({"id":id}));}
+                        drop(conn);
+                        p["data"]["automaticRequestId"]=json!(request);
+                    }
+                    let result=studio::operation(db, "snapshot", &p)?;
+                    if automatic {
+                        let retain=p["retain"].as_i64().unwrap_or(20).clamp(5,100);
+                        db.conn.lock().map_err(|e|e.to_string())?.execute("DELETE FROM studio_snapshots WHERE avatar_id=?1 AND kind='technical' AND release_id IS NULL AND json_extract(data_json,'$.automaticRequestId') IS NOT NULL AND id NOT IN (SELECT id FROM studio_snapshots WHERE avatar_id=?1 AND kind='technical' AND json_extract(data_json,'$.automaticRequestId') IS NOT NULL ORDER BY created_at DESC,rowid DESC LIMIT ?2)",rusqlite::params![avatar,retain]).map_err(|e|e.to_string())?;
+                    }
+                    presence.lock().map_err(|e|e.to_string())?["lastCapture"]=json!({"avatarId":avatar,"at":SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_secs(),"automatic":automatic});
+                    Ok(result)
                 }
                 "releases" => release(db, avatar, &p),
                 "baselines" => {
@@ -300,6 +334,21 @@ fn route(
         }
     }
     Err("Unknown protocol endpoint".into())
+}
+#[tauri::command]
+pub fn integration_request(db:tauri::State<Database>,state:tauri::State<Integration>,avatar_id:String,operation:String,relative_path:Option<String>)->Result<Value,String>{
+    if !["locate","capture"].contains(&operation.as_str()){return Err("Unsupported Bridge action".into());}
+    let project=crate::project_scan::project_path(&db,&avatar_id)?;
+    let path=relative_path.unwrap_or_default().replace('\\',"/");
+    if operation=="locate" && (!(path.starts_with("Assets/")||path.starts_with("Packages/"))||path.split('/').any(|v|v==".."||v.contains(':'))){return Err("Choose an Assets/ or Packages/ file".into());}
+    let guard=state.0.lock().map_err(|e|e.to_string())?;
+    let server=guard.as_ref().ok_or("Enable the local API and connect Unity Bridge")?;
+    let mut live=server.presence.lock().map_err(|e|e.to_string())?;
+    let now=SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_secs();
+    if now.saturating_sub(live["at"].as_u64().unwrap_or(0))>30 || live["avatarId"]!=avatar_id {return Err("Connect Unity Bridge and select this avatar tracker first".into());}
+    if live["command"]["expires"].as_u64().unwrap_or(0)>now{return Err("A Bridge action is already pending".into());}
+    let command=json!({"id":uuid::Uuid::new_v4().to_string(),"operation":operation,"avatarId":avatar_id,"projectPath":project,"path":path,"expires":now+30});
+    live["command"]=command.clone();Ok(command)
 }
 #[tauri::command]
 pub fn integration_control(
@@ -382,6 +431,29 @@ pub fn integration_control(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn automatic_snapshots_deduplicate_and_prune_only_unlinked_automatic_captures() {
+        let root=std::env::temp_dir().join(format!("vault-auto-{}",uuid::Uuid::new_v4()));
+        let db=Database::open(root).unwrap();
+        db.conn.lock().unwrap().execute("INSERT INTO avatars(id,name,created_at,updated_at,data_json) VALUES('a','A','now','now','{}')",[]).unwrap();
+        let live=Arc::new(Mutex::new(Value::Null));
+        let post=|body:Value|route(&db,Request{method:"POST".into(),path:"/api/v1/avatars/a/snapshots".into(),body},None,&live);
+        let data=json!({"schemaVersion":1,"source":"unity_editor_plugin","platform":"PC"});
+        post(json!({"label":"manual","data":data})).unwrap();
+        for _ in 0..7 {
+            let body=json!({"label":"auto","automatic":true,"requestId":uuid::Uuid::new_v4().to_string(),"retain":5,"data":data});
+            let first=post(body.clone()).unwrap();assert_eq!(first,post(body).unwrap());
+        }
+        let conn=db.conn.lock().unwrap();
+        assert_eq!(conn.query_row("SELECT count(*) FROM studio_snapshots",[],|r|r.get::<_,i64>(0)).unwrap(),6);
+        assert_eq!(conn.query_row("SELECT count(*) FROM studio_snapshots WHERE label='manual'",[],|r|r.get::<_,i64>(0)).unwrap(),1);
+        drop(conn);
+        assert!(post(json!({"label":"bad","automatic":true,"data":[]})).is_err());
+        *live.lock().unwrap()=json!({"command":{"id":"one","expires":u64::MAX}});
+        assert!(route(&db,Request{method:"POST".into(),path:"/api/v1/commands/result".into(),body:json!({"id":"wrong","ok":true})},None,&live).is_err());
+        route(&db,Request{method:"POST".into(),path:"/api/v1/commands/result".into(),body:json!({"id":"one","ok":true,"message":"Selected"})},None,&live).unwrap();
+        assert!(live.lock().unwrap()["command"].is_null());
+    }
     #[test]
     fn protocol_writes_snapshot_change_release_and_rejects_cross_avatar_links() {
         let root =

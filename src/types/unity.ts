@@ -5,7 +5,16 @@ export const unityProjectSchema = z.object({
   sdkVersion: z.string().nullable(),
   source: z.literal('filesystem'),
   packages: z.array(
-    z.object({ name: z.string(), version: z.string(), source: z.string(), type: z.string() }),
+    z.object({
+      name: z.string(),
+      displayName: z.string().optional(),
+      version: z.string(),
+      source: z.string(),
+      type: z.string(),
+      origin: z.string().optional(),
+      location: z.string().optional(),
+      reference: z.string().optional(),
+    }),
   ),
   warnings: z.array(z.string()),
 });

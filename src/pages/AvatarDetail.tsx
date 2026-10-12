@@ -5,6 +5,10 @@ import { SnapshotTimeline } from '../features/studio/SnapshotTimeline';
 import { invoke } from '@tauri-apps/api/core';
 import { useWorkspace } from '../components/workspace';
 import { UnityPanel } from '../features/avatars/UnityPanel';
+import { UnityWorkflow } from '../features/studio/UnityWorkflow';
+import { DependencyComparison } from '../features/studio/DependencyComparison';
+import { ReleasePreparation } from '../features/studio/ReleasePreparation';
+import { ReleaseBaselineOffer } from '../features/studio/ReleaseBaselineOffer';
 import { BugsPanel } from '../features/studio/BugsPanel';
 import { WorkPanel } from '../features/studio/WorkPanel';
 import { SnapshotInspector } from '../features/studio/SnapshotInspector';
@@ -71,7 +75,7 @@ export function AvatarDetail() {
     { name: 'Overview', tabs: ['Overview', 'Build performance', 'Technical', 'JSON', 'OSC'] },
     { name: 'Changes', tabs: ['Changelog'] },
     { name: 'Releases', tabs: ['Versions', 'Release notes'] },
-    { name: 'Unity', tabs: ['Unity', 'Dependencies', 'Inspectors', 'Snapshots', 'Work'] },
+    { name: 'Unity', tabs: ['Unity', 'Prepare release', 'Dependencies', 'Inspectors', 'Snapshots', 'Work'] },
     { name: 'Bugs', tabs: ['Bugs'] },
     { name: 'Notes', tabs: ['Notes'] },
     { name: 'Files', tabs: ['Files'] },
@@ -86,6 +90,7 @@ export function AvatarDetail() {
   });
   const { data: avatars = [], isLoading, error } = useAvatars();
   const avatar = avatars.find((a) => a.id === id);
+  const [baselineVersion,setBaselineVersion]=useState<{avatarId:string;version:string}|null>(null);
   useAvatarAnalysis(avatar);
   useEffect(() => {
     if (!avatar) return;
@@ -445,9 +450,10 @@ export function AvatarDetail() {
           <VersionsPanel avatarId={id} releases={releases} changes={changes} />
         )}
         {tab === 'Bugs' && <BugsPanel avatarId={id} version={avatar.custom_version} />}
-        {tab === 'Unity' && <UnityPanel avatarId={id} />}
+        {tab === 'Unity' && <><UnityWorkflow avatarId={id} snapshots={snapshots} onNavigate={(tab)=>setParams({tab})} /><UnityPanel avatarId={id} /></>}
         {tab === 'Work' && <WorkPanel avatarId={id} />}
-        {tab === 'Dependencies' && <DependenciesPanel avatarId={id} />}
+        {tab === 'Dependencies' && <><DependencyComparison avatarId={id} snapshots={snapshots}/><DependenciesPanel avatarId={id} /></>}
+        {tab === 'Prepare release' && <ReleasePreparation key={id} avatarId={id} snapshots={snapshots} changes={changes} releases={releases} onNavigate={(tab)=>setParams({tab})} onCreate={()=>setRelease(true)} />}
         {tab === 'Inspectors' && (
           <SnapshotInspector key={requestedTab} avatar={avatar} snapshots={snapshots}
             initialTab={['Parameters', 'FX', 'Performance'].includes(requestedTab) ? requestedTab : 'Parameters'} />
@@ -490,10 +496,12 @@ export function AvatarDetail() {
         <ReleaseDialog
           avatar={avatar}
           changes={changes.filter((c) => !c.release_id)}
-          onClose={() => setRelease(false)}
+            onClose={() => setRelease(false)}
+            onCreated={(version)=>setBaselineVersion({avatarId:id,version})}
         />
       )}
-      {diff && (
+        {!release && baselineVersion && baselineVersion.avatarId === id && info?.project && <ReleaseBaselineOffer avatarId={baselineVersion.avatarId} version={baselineVersion.version} onClose={()=>setBaselineVersion(null)} />}
+        {diff && (
         <DiffDialog
           title="Detected changes from VRChat"
           differences={diff.differences}

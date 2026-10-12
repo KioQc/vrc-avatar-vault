@@ -5,7 +5,6 @@ import { version as appVersion } from '../../package.json';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { invoke } from '@tauri-apps/api/core';
 import {
-  Box,
   House,
   Layers,
   Star,
@@ -92,12 +91,8 @@ export function AppSidebar() {
   return (
     <aside className="sidebar">
       <Link to="/" className="brand">
-        <span className="brand-symbol">
-          <Box size={20} />
-        </span>
-        <div>
-          VRC Avatar Vault<small>AVATAR WORKSPACE</small>
-        </div>
+        <img className="brand-logo" src="/branding/vav-short.png" alt="VRC Avatar Vault" />
+        <img className="brand-logo-compact" src="/branding/vav-symbol.png" alt="VRC Avatar Vault" />
       </Link>
       <nav>
         {groups.map((g) => (

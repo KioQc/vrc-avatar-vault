@@ -1,0 +1,17 @@
+VRC Avatar Vault 0.9.0 — Unity Workflow
+
+- Nouveaux logos et icônes VAV; navigation Unity et explorateurs de fichiers repensés.
+- Projet VCC lié, version Unity/SDK, dépendances VPM/UPM/Git/locales et package.json installés, dont VRCFury.
+- Dépendances manuelles modifiables avec recherche, version, source, chemin, lien et notes.
+- Changements de fichiers regroupés par dossier, recherche, filtres, renommages, pagination et détail au clic.
+- Snapshots, comparaison des fichiers et dépendances, préparation de release et proposition de baseline liée après release.
+- Menus du Descriptor et menus VRCFury réunis dans une arborescence; hiérarchie et paramètres repliables; provenance conservée.
+- Paramètres : usages menus/contrôleurs, doublons et références absentes des données authored à vérifier.
+- Unity Bridge 0.2.0 : actions directes Locate in Unity et capture depuis VAV, état de connexion et dernière capture.
+- Captures automatiques facultatives après inactivité, désactivées par défaut; historique limité aux anciennes captures automatiques sans lien de release; déduplication des réessais.
+- Comparaison avant/après des captures Unity, y compris VRCFury, et comparaison des packages depuis les baselines.
+- Données existantes conservées dans AppData; aucune nouvelle migration SQLite.
+
+Installation : mettre à jour VAV puis installer Unity Bridge 0.2.0 depuis le tarball via Unity Package Manager. Activer l’API locale dans VAV, connecter Tools > VRC Avatar Vault avec le token et choisir le tracker de l’avatar.
+
+Limites : VRCFury est lu avant build (assets référencés et déclarations Toggle). Le menu/les paramètres finaux générés ou renommés pendant le build ne sont pas encore capturés. Les checks de références sont indicatifs, pas une validation SDK finale. Un snapshot de fichiers contient les métadonnées et empreintes, pas une copie/restauration des assets Unity. Les commandes locales nécessitent le projet correspondant ouvert et le tracker sélectionné.
